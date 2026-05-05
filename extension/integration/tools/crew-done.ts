@@ -17,6 +17,10 @@ export function registerCrewDoneTool({ pi, crew }: CrewToolDeps): void {
 			subagent_id: Type.String({ description: "ID of the subagent to close" }),
 		}),
 		promptSnippet: "Close an interactive subagent session when done.",
+		promptGuidelines: [
+			"crew_done: Close a waiting interactive subagent owned by this session.",
+			"crew_done: Use only when no further follow-up is needed; otherwise use crew_respond.",
+		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const callerSessionId = ctx.sessionManager.getSessionId();

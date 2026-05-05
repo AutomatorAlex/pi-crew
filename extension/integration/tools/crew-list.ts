@@ -17,8 +17,9 @@ export function registerCrewListTool({
 		parameters: Type.Object({}),
 		promptSnippet: "List subagent definitions and active subagents",
 		promptGuidelines: [
-			"Use crew_list first to see available subagents before spawning.",
-			"crew_list: Call this only to discover available subagents before spawning, or when the user explicitly asks for a status report. Do not call it to check if a subagent finished — results arrive as steering messages automatically.",
+			"crew_list: List available subagents and active subagents owned by this session.",
+			"crew_list: Use before crew_spawn to discover names, descriptions, and interactive status.",
+			"crew_list: Use only for discovery or a requested status snapshot; do not poll for completion.",
 		],
 
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {

@@ -75,14 +75,16 @@ Prepare one short brief for both reviewers including:
 - short summary per file or file group
 - additional user instructions
 - **explicit scope boundary**: what is being reviewed (in scope) and what is not being reviewed (out of scope). For example: "Only the auth module changes are in scope. The unrelated CSS refactor in the same PR is out of scope for this review."
+- **explicit default override**: reviewers must review only the resolved scope in the brief and ignore their own default scope rules if they differ.
 
 ## Execution
 
 Spawn `code-reviewer` and `quality-reviewer` in parallel.
 
 If one reviewer is unavailable or fails to start, report that clearly and continue with the reviewer that is available.
+If a successfully spawned reviewer later returns `error` or `aborted`, report that clearly in the final summary and complete the report using only the reviewer results that completed successfully.
 
-Do not produce a final report until all successfully spawned reviewers have returned a result.
+Do not produce a final report until all successfully spawned reviewers have returned a terminal result (`done`, `error`, or `aborted`).
 Do not poll or repeatedly check active subagents while waiting; results will be delivered asynchronously.
 
 ## Findings Acceptance Gate

@@ -1,23 +1,22 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import {
-	type AbortOwnedResult,
-	type AbortableAgentSummary,
-	type ActiveAgentSummary,
-	crewRuntime,
-} from "./runtime/crew-runtime.js";
+import { crewRuntime } from "./runtime/crew-runtime.js";
 import { registerCrewIntegration } from "./integration.js";
 import { updateWidget } from "./status-widget.js";
 
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 
 // Process-level cleanup for subagents on exit
-let processHooksSetup = false;
+const processHooksSetupKey = Symbol.for("pi-crew.processHooksSetup");
+const globalWithProcessHooks = globalThis as typeof globalThis & Record<
+	symbol,
+	boolean | undefined
+>;
 
 function setupProcessHooks() {
-	if (processHooksSetup) return;
-	processHooksSetup = true;
+	if (globalWithProcessHooks[processHooksSetupKey]) return;
+	globalWithProcessHooks[processHooksSetupKey] = true;
 
 	process.once('SIGINT', () => {
 		crewRuntime.abortAll();
@@ -45,7 +44,6 @@ export default function (pi: ExtensionAPI) {
 			},
 			refreshWidget,
 		);
-		refreshWidget();
 	};
 
 	pi.on("session_start", (_event, ctx) => {

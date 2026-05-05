@@ -23,7 +23,9 @@ export function registerCrewRespondTool({ pi, crew }: CrewToolDeps): void {
 		promptSnippet:
 			"Send a follow-up message to a waiting interactive subagent.",
 		promptGuidelines: [
-			"crew_respond: Response is delivered asynchronously as a steering message. Do not poll crew_list. Continue with unrelated work or end your turn and wait for the steering message.",
+			"crew_respond: Send a complete follow-up message to a waiting interactive subagent.",
+			"crew_respond: Use the waiting subagent ID from crew_spawn results or crew_list.",
+			"crew_respond: The response arrives as a steering message; do not poll crew_list.",
 		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {

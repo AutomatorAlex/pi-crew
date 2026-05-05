@@ -20,21 +20,19 @@ From git:
 pi install git:github.com/melihmucuk/pi-crew
 ```
 
-This installs the extension, bundled prompt template, and bundled subagent definitions. Bundled subagents are automatically discovered and ready to use without any extra setup.
-
-## Architecture
-
-For an implementation-grounded description of runtime behavior, ownership rules, delivery semantics, and integration points, see [docs/architecture.md](./docs/architecture.md).
+This installs the extension and all bundled resources. Subagent definitions are automatically discovered and ready to use without any extra setup.
 
 ## How It Works
 
-pi-crew adds five tools, one command, and one bundled prompt template to your pi session.
+Once installed, pi-crew exposes these capabilities in your pi session:
 
-### `crew_list`
+### Tools
+
+#### `crew_list`
 
 Lists available subagent definitions and active subagents owned by the current session.
 
-### `crew_spawn`
+#### `crew_spawn`
 
 Spawns a subagent in an isolated session. The subagent runs in the background with its own context window, tools, and skills. When it finishes, the result is delivered to the session that spawned it as a steering message that triggers a new turn. If that session is not active, the result is queued until you switch back to it.
 
@@ -42,7 +40,7 @@ Spawns a subagent in an isolated session. The subagent runs in the background wi
 "spawn scout and find all API endpoints and their authentication methods"
 ```
 
-### `crew_abort`
+#### `crew_abort`
 
 Aborts one, many, or all active subagents owned by the current session.
 
@@ -58,9 +56,9 @@ Supported modes:
 "abort all active subagents"
 ```
 
-Tool-triggered aborts are reported back as steering messages with the reason `Aborted by tool request`. User-command aborts and shutdown-triggered aborts use distinct reasons.
+Tool-triggered aborts are reported back as steering messages with the reason `Aborted by tool request`. Shutdown-triggered aborts use a distinct reason.
 
-### `crew_respond`
+#### `crew_respond`
 
 Sends a follow-up message to an interactive subagent owned by the current session that is waiting for a response. Interactive subagents stay alive after their initial response, allowing multi-turn conversations.
 
@@ -68,7 +66,7 @@ Sends a follow-up message to an interactive subagent owned by the current sessio
 "respond to planner-a1b2 with: yes, use the existing auth middleware"
 ```
 
-### `crew_done`
+#### `crew_done`
 
 Closes an interactive subagent session owned by the current session when you no longer need it. This disposes the session and frees memory.
 
@@ -76,24 +74,27 @@ Closes an interactive subagent session owned by the current session when you no 
 "close planner-a1b2, the plan looks good"
 ```
 
-### `/pi-crew-abort`
+### Prompt Templates
 
-Aborts a running subagent. Supports tab completion for subagent IDs.
-Unlike the `crew_abort` tool, this command is intentionally unrestricted and works as an emergency escape hatch across sessions.
-
-### `/pi-crew-plan`
+#### `/pi-crew-plan`
 
 Expands a bundled prompt template that orchestrates discovery and planning for implementation tasks.
 Use it to spawn scout subagents to investigate the codebase, then delegate to a planner subagent to produce a step-by-step implementation plan.
 
 Note: This prompt requires the `scout` and `planner` subagent definitions. These are included as bundled subagents and work out of the box.
 
-### `/pi-crew-review`
+#### `/pi-crew-review`
 
 Expands a bundled prompt template that orchestrates parallel code and quality reviews.
 Use it to review recent commits, staged changes, unstaged changes, and untracked files with `code-reviewer` and `quality-reviewer`, then merge both results into one report.
 
 Note: This prompt requires the `code-reviewer` and `quality-reviewer` subagent definitions. These are included as bundled subagents and work out of the box.
+
+### Skills
+
+#### `pi-crew`
+
+A bundled orchestration skill that provides best practices for delegating work to subagents, handling asynchronous results, and managing interactive subagent lifecycle. It loads automatically when you coordinate work with pi-crew tools.
 
 ## Bundled Subagents
 

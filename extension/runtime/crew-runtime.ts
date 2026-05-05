@@ -9,7 +9,6 @@ import { type ActiveRuntimeBinding, DeliveryCoordinator } from "./delivery-coord
 import { runPromptWithOverflowRecovery } from "./overflow-recovery.js";
 import { SubagentRegistry } from "./subagent-registry.js";
 import {
-	type AbortableAgentSummary,
 	type ActiveAgentSummary,
 	type SubagentState,
 	isAbortableStatus,
@@ -17,7 +16,6 @@ import {
 } from "./subagent-state.js";
 
 export type {
-	AbortableAgentSummary,
 	ActiveAgentSummary,
 } from "./subagent-state.js";
 
@@ -403,18 +401,14 @@ class CrewRuntime {
 	}
 
 	/**
-	 * Abort all running subagents during shutdown cleanup.
+	 * Abort all abortable subagents during shutdown cleanup.
 	 * Called from SIGINT, session_shutdown(reason="quit"), and beforeExit fallback paths.
 	 */
 	abortAll(): void {
-		const allAgents = this.registry.getAllRunning();
+		const allAgents = this.registry.getAllAbortable();
 		for (const state of allAgents) {
 			this.abort(state.id, { reason: "Aborted during shutdown" });
 		}
-	}
-
-	getAbortableAgents(): AbortableAgentSummary[] {
-		return this.registry.getAbortableAgents();
 	}
 
 	getActiveSummariesForOwner(ownerSessionId: string): ActiveAgentSummary[] {
@@ -422,5 +416,11 @@ class CrewRuntime {
 	}
 }
 
-export const crewRuntime = new CrewRuntime();
+const crewRuntimeKey = Symbol.for("pi-crew.runtime");
+const globalWithCrewRuntime = globalThis as typeof globalThis & Record<
+	symbol,
+	CrewRuntime | undefined
+>;
+
+export const crewRuntime = globalWithCrewRuntime[crewRuntimeKey] ??= new CrewRuntime();
 export type { CrewRuntime };

@@ -1,7 +1,6 @@
 import type { AgentConfig } from "../agent-discovery.js";
-import type { AbortableAgentSummary, ActiveAgentSummary, SubagentState } from "./subagent-state.js";
+import type { ActiveAgentSummary, SubagentState } from "./subagent-state.js";
 import {
-	buildAbortableAgentSummary,
 	buildActiveAgentSummary,
 	generateId,
 	isAbortableStatus,
@@ -54,12 +53,6 @@ export class SubagentRegistry {
 		return count;
 	}
 
-	getAbortableAgents(): AbortableAgentSummary[] {
-		return Array.from(this.activeAgents.values())
-			.filter((state) => isAbortableStatus(state.status))
-			.map(buildAbortableAgentSummary);
-	}
-
 	getActiveSummariesForOwner(ownerSessionId: string): ActiveAgentSummary[] {
 		return Array.from(this.activeAgents.values())
 			.filter(
@@ -77,7 +70,7 @@ export class SubagentRegistry {
 			.map((state) => state.id);
 	}
 
-	getAllRunning(): SubagentState[] {
+	getAllAbortable(): SubagentState[] {
 		return Array.from(this.activeAgents.values()).filter((state) =>
 			isAbortableStatus(state.status),
 		);

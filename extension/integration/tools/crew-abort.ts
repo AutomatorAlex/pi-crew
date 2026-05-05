@@ -50,6 +50,11 @@ export function registerCrewAbortTool({ pi, crew }: CrewToolDeps): void {
 			),
 		}),
 		promptSnippet: "Abort one, many, or all active subagents from this session.",
+		promptGuidelines: [
+			"crew_abort: Abort one, many, or all active subagents owned by this session.",
+			"crew_abort: Provide exactly one mode: subagent_id, subagent_ids, or all=true.",
+			"crew_abort: Use only when delegated work is obsolete, wrong, or explicitly cancelled.",
+		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
 			const callerSessionId = ctx.sessionManager.getSessionId();
