@@ -1,7 +1,7 @@
 import type {
 	ExtensionAPI,
 	ExtensionContext,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import type { AgentDiscoveryWarning } from "../../agent-discovery.js";
 import type { CrewRuntime } from "../../runtime/crew-runtime.js";
 

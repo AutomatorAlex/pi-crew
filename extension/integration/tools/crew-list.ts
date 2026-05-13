@@ -1,4 +1,4 @@
-import { Text } from "@mariozechner/pi-tui";
+import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { discoverAgents } from "../../agent-discovery.js";
 import { STATUS_ICON, sendCrewListActiveWarning } from "../../subagent-messages.js";

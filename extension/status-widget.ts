@@ -1,5 +1,5 @@
-import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
+import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import type { ActiveAgentSummary } from "./runtime/crew-runtime.js";
 import type { CrewRuntime } from "./runtime/crew-runtime.js";
 

@@ -1,4 +1,4 @@
-import type { AgentSession, AgentSessionEvent } from "@mariozechner/pi-coding-agent";
+import type { AgentSession, AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 
 const OVERFLOW_RECOVERY_TIMEOUT_MS = 120_000;
 

@@ -1,150 +1,70 @@
 ---
-description: Run parallel code and quality reviews by gathering minimal context and orchestrating reviewer subagents.
+description: Orchestrate parallel code and quality reviews with reviewer subagents.
 ---
 
 # Parallel Review
 
-## Input
+Additional instructions: `$ARGUMENTS`
 
-**Additional instructions**: `$ARGUMENTS`
+You are a review orchestrator, not a reviewer. Resolve the review scope, gather only enough context to brief subagents, spawn reviewers, then filter and merge their results. Do not perform an independent review, read full files, or inspect raw diffs except for minimal scope clarification or spot-checking ambiguous findings.
 
-## Role
+## Scope
 
-This is an orchestration prompt.
-Determine review scope with minimal context gathering, prepare a short neutral brief, spawn the reviewer subagents, wait for their results, and merge them into one final report.
+Use the user's scope when provided. Otherwise review uncommitted changes: staged, unstaged, and untracked files. If “latest” or “recent” is requested, review the last 5 commits unless a count is given.
 
-Do not perform the review yourself.
-Do not perform a broad second review or re-investigate the whole repository. Your job is orchestration, filtering, and merging. If a reviewer finding is ambiguous, high-impact, or appears out of scope, you may do a minimal spot-check to clarify whether it is concrete enough to include.
+Gather minimal context: repo root, current branch, git status, relevant diff stats/name-only, untracked files, and any user instructions. Keep the brief neutral and descriptive, not analytical. Stop when scope and changed files are clear.
 
-## Scope Rules
+## Subagents
 
-- If the user specifies a scope (commit, branch, files, PR, or focus area), that scope overrides the default scope.
-- Otherwise, default scope includes:
-  - recent commits
-  - staged changes
-  - unstaged changes
-  - untracked files
+Call `crew_list` first and check for `code-reviewer` and `quality-reviewer`. Spawn available reviewers in parallel. If one is unavailable, fails to start, returns `error`, or is aborted, report that clearly and continue with completed reviewer results.
 
-## Context Gathering
+Send each reviewer a self-contained brief with:
+- repo root and branch;
+- resolved in-scope review target;
+- explicit out-of-scope boundaries;
+- commit range or changed file list;
+- staged/unstaged/untracked status when relevant;
+- short file/group summary;
+- additional user instructions;
+- instruction to ignore the reviewer’s own default scope if it differs from this brief.
 
-Collect only enough context to define scope and prepare a short brief.
+Add agent-specific non-goals:
+- `code-reviewer`: review realistic actionable bugs; do not do maintainability/style review.
+- `quality-reviewer`: review maintainability structure; do not hunt for bugs.
 
-Collect:
+Do not poll. Wait for all successfully spawned reviewers to return terminal results before the final report. Never fabricate subagent output.
 
-- repo root
-- current branch
-- `git status --short`
-- `git log --oneline --decorate -n 5`
-- `git diff --stat --cached`
-- `git diff --stat`
-- untracked file list
+## Acceptance Gate
 
-For recent commits:
+Before forwarding a finding, keep only evidence-backed, actionable findings with realistic trigger or concrete maintenance impact. Keep valid Minor findings. Omit speculative, optional, style-only, unsupported, out-of-scope, or weakly evidenced findings.
 
-- use `HEAD~3..HEAD` if at least 3 commits exist
-- otherwise use the widest reachable history range
-
-Collect for that range:
-
-- `git diff --stat <range>`
-- `git diff --name-only <range>`
-
-Rules:
-
-- Do not read full files before spawning subagents.
-- Do not dump raw diffs into the prompt.
-- Do not inspect every changed file manually.
-- Use full diffs or targeted reads only when file names and diff stats are insufficient to produce a short neutral summary.
-- Keep the brief short and descriptive, not analytical.
-- Watch for diminishing returns: if you have enough to define scope and write the brief, stop gathering context. More git commands or file reads at this stage add noise, not clarity.
-
-## Subagent Preparation
-
-Call `crew_list` first and verify that both are available:
-
-- `code-reviewer`
-- `quality-reviewer`
-
-Prepare one short brief for both reviewers including:
-
-- repo root
-- resolved review scope
-- commit range if any
-- staged / unstaged / untracked status
-- changed files
-- short summary per file or file group
-- additional user instructions
-- **explicit scope boundary**: what is being reviewed (in scope) and what is not being reviewed (out of scope). For example: "Only the auth module changes are in scope. The unrelated CSS refactor in the same PR is out of scope for this review."
-- **explicit default override**: reviewers must review only the resolved scope in the brief and ignore their own default scope rules if they differ.
-
-## Execution
-
-Spawn `code-reviewer` and `quality-reviewer` in parallel.
-
-If one reviewer is unavailable or fails to start, report that clearly and continue with the reviewer that is available.
-If a successfully spawned reviewer later returns `error` or `aborted`, report that clearly in the final summary and complete the report using only the reviewer results that completed successfully.
-
-Do not produce a final report until all successfully spawned reviewers have returned a terminal result (`done`, `error`, or `aborted`).
-Do not poll or repeatedly check active subagents while waiting; results will be delivered asynchronously.
-
-## Findings Acceptance Gate
-
-Before including a reviewer finding in the final report, apply these filters:
-
-Include a finding only if:
-- it is actionable now
-- it describes a realistic scenario for this project
-- it includes a concrete trigger or maintenance impact
-- it includes evidence or a clear rationale from the reviewer
-- its severity matches the described likelihood and impact
-
-Exclude findings that are:
-- speculative or theory-driven (no realistic trigger)
-- based on broken invariants or unsupported usage
-- style preferences or optional refactors without concrete bug risk
-- vague suggestions without concrete trigger, impact, or evidence
-
-Do not exclude a legitimate Minor finding that has a concrete trigger and realistic near-term impact. Minor findings with evidence pass the gate; Minor findings without evidence do not.
-
-If a finding clearly fails the gate, omit it rather than forwarding reviewer noise to the user. Prefer omission for weak or optional findings, but do not discard a potentially important finding solely because the reviewer wrote it imperfectly. The merged report should be shorter and more impactful than the raw reviewer outputs, not a concatenation of them.
+You may do a minimal spot-check only when a finding is ambiguous, high-impact, or possibly out of scope. Do not turn the spot-check into a second review.
 
 ## Merge
 
-Write the final response in the same language as the user's request.
+Reply in the user's language. Apply the gate before merging.
 
-Structure:
+Sections:
 
 ### Consensus Findings
-
-Merge only findings that are clearly the same issue reported by both reviewers.
+Issues clearly reported by both reviewers.
 
 ### Code Review Findings
-
-Include findings reported only by `code-reviewer`.
+Accepted findings only from `code-reviewer`.
 
 ### Quality Review Findings
-
-Include findings reported only by `quality-reviewer`.
+Accepted findings only from `quality-reviewer`.
 
 ### Final Summary
-
-Include:
-
-- review scope
-- which reviewers ran
-- consensus findings count
-- code review findings count
-- quality review findings count
-- overall assessment
+- Review scope
+- Reviewers run and any failures
+- Consensus findings count
+- Code review findings count
+- Quality review findings count
+- Overall assessment
 
 Rules:
-
 - Do not repeat overlapping findings.
-- Do not invent reviewer output, evidence, or counts.
 - Do not present a single-reviewer finding as consensus.
-- Apply the Findings Acceptance Gate before merging. Do not forward weak, speculative, or optional findings; if a single-reviewer finding appears important but ambiguous, do a minimal spot-check before deciding.
-- If both reviewers report no issues, say so explicitly.
-- If one reviewer failed or was unavailable, say so explicitly.
-- Review only. Do not make code changes.
-- Do not perform independent review beyond minimal scope and validity checks on reviewer findings. Only orchestrate reviewers and merge their reported results.
-- Never fabricate subagent results. Wait for all successfully spawned reviewers to return.
+- If both reviewers report no accepted findings, say so clearly.
+- Review only; do not change code.

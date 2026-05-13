@@ -5,8 +5,8 @@ import {
   type ModelRegistry,
   SessionManager,
   SettingsManager,
-} from "@mariozechner/pi-coding-agent";
-import type { Api, Model } from "@mariozechner/pi-ai";
+} from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@earendil-works/pi-ai";
 import type { AgentConfig } from "./agent-discovery.js";
 import { SUPPORTED_TOOL_NAMES, type SupportedToolName } from "./tool-registry.js";
 
