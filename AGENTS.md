@@ -58,7 +58,7 @@
 
 ### Package Resources
 
-- Bundled resources must be included in both npm `files` and the `pi` manifest; otherwise installed packages may omit or fail to register them.
+- Bundled resources must be included in npm `files`; resources registered with pi must also appear in the `pi` manifest. Bundled subagent definitions are discovered from the package filesystem and should stay in `files`, not the `pi` manifest.
 - Keep detailed pi-crew orchestration guidance in the bundled `pi-crew` skill. Tool `promptGuidelines` should stay concise and tool-specific to avoid bloating the system prompt.
 - Orchestration prompts and skills should produce compact, task-specific subagent briefs: prioritize intent, expected outcome, decisions, and relevant entry points; avoid repeating subagent role boilerplate, default scope/output/edit permissions, cwd/branch/Git inventories, or generic repo guidance.
 

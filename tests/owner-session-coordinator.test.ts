@@ -120,4 +120,22 @@ describe("OwnerSessionCoordinator", () => {
 
 		assert.equal(sent.length, 0);
 	});
+
+	it("drops stale pending owner messages during flush", () => {
+		let now = 0;
+		let flush: (() => void) | undefined;
+		const { coordinator, binding, sent } = setup({
+			now: () => now,
+			scheduleFlush: (callback) => {
+				flush = callback;
+			},
+		});
+
+		coordinator.deliver("owner-1", payload());
+		now = 86_400_001;
+		coordinator.activateSession(binding);
+		flush?.();
+
+		assert.equal(sent.length, 0);
+	});
 });
