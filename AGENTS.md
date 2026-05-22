@@ -16,8 +16,8 @@
 - Subagent orchestration state must survive extension module reloads and session replacement. Keep `CrewRuntime` process-global; only session-bound delivery/widget bindings should be rebound per active session.
 - Keep `CrewRuntime` as the coordinator over the registry, lifecycle, owner-session delivery, and widget refresh callbacks. Do not move lifecycle, catalog, delivery, or tool-action behavior back into one monolith.
 - Prompt cycles are owned by `SubagentLifecycle` and wrapped with overflow recovery tracking that observes `agent_end`, `compaction_start`, `compaction_end`, `auto_retry_start`, and `auto_retry_end` events. Outcomes: `"none"` (no overflow), `"recovered"` (overflow handled + retry succeeded), `"failed"` (timeout, cancelled, or compaction did not retry). Do not bypass or short-circuit overflow recovery. When recovery returns `"failed"` and the subagent did not already settle as `error` via stop reason, settle it as `error` with reason "Context overflow recovery failed".
-- Discovery, source priority, frontmatter parsing, config overrides, and discovery warnings belong behind `AgentCatalog`; filesystem loading stays in `agent-discovery.ts`.
-- Tool validation, ownership checks, and user-facing tool result text belong in `CrewToolActions`; individual tool registration files should remain thin schema/presentation wrappers.
+- Discovery, source priority, config overrides, and discovery warnings belong behind `AgentCatalog`; filesystem loading stays in `agent-discovery.ts`; frontmatter/config field parsing belongs in `agent-config-fields.ts`.
+- Tool validation, ownership checks, and user-facing tool result text belong in `CrewToolActions`; context mapping and side effect execution belong in `CrewToolExecutor`; individual tool registration files should remain thin schema/presentation wrappers.
 
 ### State Lifecycle
 
@@ -28,14 +28,14 @@
 - `error` → failed with error or overflow recovery failure.
 - `aborted` → cancelled via `crew_abort` or shutdown.
 - State transitions after prompt cycle: `stopReason: "error"` → `error`; `stopReason: "aborted"` → `aborted`; normal completion + `interactive: true` → `waiting`; normal completion + non-interactive → `done`.
-- `isAbortableStatus` covers `running` and `waiting`. Only abortable subagents appear in active summaries and are targetable by abort tools. Do not expand or shrink this predicate.
+- Subagent transition predicates and validation belong in `subagent-transitions.ts`. `isAbortableStatus` covers `running` and `waiting`. Only abortable subagents appear in active summaries and are targetable by abort tools. Do not expand or shrink this predicate.
 - `crew_done` only closes `waiting` subagents. Do not call it on `running`, `done`, `error`, or `aborted` subagents.
 
 ### Message Delivery
 
-- Owner-session delivery, pending queues, remaining-result notes, delayed flushes, and owner widget refresh hooks belong in `OwnerSessionCoordinator`.
+- Owner-session queueing, pending queues, remaining-result ordering, delayed flushes, and owner widget refresh hooks belong in `OwnerSessionCoordinator`.
 - Results must be routed to the owner session, not the currently active session. If the owner session is not active, queue the result and deliver on `session_start` when that owner becomes active.
-- Check the owner session's streaming state before sending a subagent result. Use `{ triggerTurn: true }` when `isIdle() = true`, and `{ deliverAs: "steer", triggerTurn: true }` when `isIdle() = false`. Sending `deliverAs: "steer"` to an idle session causes the message to sit unprocessed because there is no active turn loop.
+- Message construction belongs in `subagent-messages.ts`; idle/streaming `sendMessage` option selection belongs in `message-delivery-policy.ts`. Sending `deliverAs: "steer"` to an idle session causes the message to sit unprocessed because there is no active turn loop.
 - Subagent completion always sends the same steering message format: subagent name, id, status, and final message. Whether the subagent is interactive or not does not change this message; it only determines whether the session stays open.
 - `crew_respond` must be fire-and-forget. Blocking the caller session defeats the purpose of interactive subagents. Validate, return immediately, and deliver the result via steering message.
 - `crew_done` only performs cleanup (dispose + remove from map). It must not send a steering message because the last subagent response was already delivered in the previous turn. Sending it again produces a duplicate message and an unnecessary turn.
