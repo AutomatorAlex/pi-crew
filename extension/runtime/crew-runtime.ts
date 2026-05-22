@@ -2,15 +2,20 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { AgentConfig } from "../agent-discovery.js";
 import type { BootstrapContext } from "../bootstrap-session.js";
-import type { SubagentStatus } from "../subagent-messages.js";
 import { type ActiveRuntimeBinding, OwnerSessionCoordinator } from "./owner-session-coordinator.js";
 import { SubagentRegistry } from "./subagent-registry.js";
 import { SubagentLifecycle } from "./subagent-lifecycle.js";
-import {
-	type ActiveAgentSummary,
-	type SubagentState,
-	isAbortableStatus,
+import type {
+	ActiveAgentSummary,
+	SubagentState,
 } from "./subagent-state.js";
+import {
+	type SettledSubagentStatus,
+	canAbortSubagent,
+	settleSubagent,
+	startSubagentResponse,
+	validateSubagentDone,
+} from "./subagent-transitions.js";
 
 export type {
 	ActiveAgentSummary,
@@ -114,12 +119,10 @@ class CrewRuntime {
 
 	private settleAgent(
 		state: SubagentState,
-		nextStatus: SubagentStatus,
+		nextStatus: SettledSubagentStatus,
 		opts: { result?: string; error?: string },
 	): void {
-		state.status = nextStatus;
-		state.result = opts.result;
-		state.error = opts.error;
+		settleSubagent(state, nextStatus, opts);
 
 		this.ownerSessions.deliver(
 			state.ownerSessionId,
@@ -154,42 +157,33 @@ class CrewRuntime {
 		message: string,
 		callerSessionId: string,
 	): { error?: string } {
-		const state = this.registry.get(id);
-		if (!state) return { error: `No subagent with id "${id}"` };
-		if (state.ownerSessionId !== callerSessionId) {
-			return { error: `Subagent "${id}" belongs to a different session` };
-		}
-		if (state.status !== "waiting") {
-			return {
-				error: `Subagent "${id}" is not waiting for a response (status: ${state.status})`,
-			};
-		}
-		if (!state.session)
-			return { error: `Subagent "${id}" has no active session` };
+		const transition = startSubagentResponse(
+			this.registry.get(id),
+			id,
+			callerSessionId,
+		);
+		if (!transition.ok) return { error: transition.error };
 
-		state.status = "running";
-		this.ownerSessions.refresh(state.ownerSessionId);
-		this.lifecycle.respond(state, message);
+		this.ownerSessions.refresh(transition.state.ownerSessionId);
+		this.lifecycle.respond(transition.state, message);
 		return {};
 	}
 
 	done(id: string, callerSessionId: string): { error?: string } {
-		const state = this.registry.get(id);
-		if (!state) return { error: `No active subagent with id "${id}"` };
-		if (state.ownerSessionId !== callerSessionId) {
-			return { error: `Subagent "${id}" belongs to a different session` };
-		}
-		if (state.status !== "waiting") {
-			return { error: `Subagent "${id}" is not in waiting state` };
-		}
+		const transition = validateSubagentDone(
+			this.registry.get(id),
+			id,
+			callerSessionId,
+		);
+		if (!transition.ok) return { error: transition.error };
 
-		this.disposeAgent(state);
+		this.disposeAgent(transition.state);
 		return {};
 	}
 
 	abort(id: string, opts: AbortOptions): boolean {
 		const state = this.registry.get(id);
-		if (!state || !isAbortableStatus(state.status)) return false;
+		if (!canAbortSubagent(state)) return false;
 
 		this.lifecycle.abortPrompt(state);
 		this.settleAgent(state, "aborted", { error: opts.reason });
@@ -212,7 +206,7 @@ class CrewRuntime {
 
 		for (const id of uniqueIds) {
 			const state = this.registry.get(id);
-			if (!state || !isAbortableStatus(state.status)) {
+			if (!canAbortSubagent(state)) {
 				result.missingIds.push(id);
 				continue;
 			}

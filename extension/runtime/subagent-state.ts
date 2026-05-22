@@ -36,15 +36,6 @@ export function generateId(name: string, existingIds: Set<string>): string {
 	return `${name}-${randomBytes(8).toString("hex")}`;
 }
 
-// Status may change externally via abort(). Standalone function avoids TS narrowing.
-export function isAborted(state: SubagentState): boolean {
-	return state.status === "aborted";
-}
-
-export function isAbortableStatus(status: SubagentStatus): boolean {
-	return status === "running" || status === "waiting";
-}
-
 export function buildActiveAgentSummary(
 	state: SubagentState,
 ): ActiveAgentSummary {

@@ -3,8 +3,8 @@ import type { ActiveAgentSummary, SubagentState } from "./subagent-state.js";
 import {
 	buildActiveAgentSummary,
 	generateId,
-	isAbortableStatus,
 } from "./subagent-state.js";
+import { isAbortableStatus } from "./subagent-transitions.js";
 
 export class SubagentRegistry {
 	private activeAgents = new Map<string, SubagentState>();
