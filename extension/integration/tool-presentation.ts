@@ -5,26 +5,6 @@ import { Box, Text } from "@earendil-works/pi-tui";
 export type ToolTheme = Parameters<Exclude<Parameters<ExtensionAPI["registerTool"]>[0]["renderCall"], undefined>>[1];
 export type ToolResult = AgentToolResult<unknown>;
 
-export function toolError(text: string) {
-	return {
-		content: [{ type: "text" as const, text }],
-		isError: true,
-		details: { error: true },
-	};
-}
-
-export function toolSuccess(
-	text: string,
-	details: Record<string, unknown> = {},
-	options: { terminate?: boolean } = {},
-) {
-	return {
-		content: [{ type: "text" as const, text }],
-		details,
-		...(options.terminate ? { terminate: true } : {}),
-	};
-}
-
 export function renderCrewCall(
 	theme: ToolTheme,
 	name: string,

@@ -2,12 +2,10 @@ import { Type } from "typebox";
 import {
 	renderCrewCall,
 	renderCrewResult,
-	toolError,
-	toolSuccess,
 } from "../tool-presentation.js";
 import type { CrewToolDeps } from "./tool-deps.js";
 
-export function registerCrewRespondTool({ pi, crew }: CrewToolDeps): void {
+export function registerCrewRespondTool({ pi, actions }: CrewToolDeps): void {
 	pi.registerTool({
 		name: "crew_respond",
 		label: "Respond to Crew",
@@ -29,18 +27,10 @@ export function registerCrewRespondTool({ pi, crew }: CrewToolDeps): void {
 		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const callerSessionId = ctx.sessionManager.getSessionId();
-			const { error } = crew.respond(
-				params.subagent_id,
-				params.message,
-				callerSessionId,
-			);
-			if (error) return toolError(error);
-
-			return toolSuccess(
-				`Message sent to subagent ${params.subagent_id}. Response will be delivered as a steering message.`,
-				{ id: params.subagent_id, message: params.message },
-			);
+			return actions.respond(params, {
+				cwd: ctx.cwd,
+				callerSessionId: ctx.sessionManager.getSessionId(),
+			}).result;
 		},
 
 		renderCall(args, theme, _context) {

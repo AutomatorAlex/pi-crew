@@ -1,18 +1,14 @@
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { discoverAgents } from "../../agent-discovery.js";
 import {
 	renderCrewCall,
 	renderCrewResult,
-	toolError,
-	toolSuccess,
 } from "../tool-presentation.js";
-import type { CrewToolDeps } from "./tool-deps.js";
+import { runToolActionSideEffects, type CrewToolDeps } from "./tool-deps.js";
 
 export function registerCrewSpawnTool({
 	pi,
-	crew,
-	extensionDir,
+	actions,
 	notifyDiscoveryWarnings,
 }: CrewToolDeps): void {
 	pi.registerTool({
@@ -35,40 +31,22 @@ export function registerCrewSpawnTool({
 		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const { agents, warnings } = discoverAgents(ctx.cwd);
-			notifyDiscoveryWarnings(ctx, warnings);
-			const subagent = agents.find(
-				(candidate) => candidate.name === params.subagent,
+			const response = actions.spawn(params, {
+				cwd: ctx.cwd,
+				callerSessionId: ctx.sessionManager.getSessionId(),
+				model: ctx.model,
+				modelRegistry: ctx.modelRegistry,
+				agentDir: getAgentDir(),
+				parentSessionFile: ctx.sessionManager.getSessionFile(),
+				onWarning: (msg) => ctx.ui.notify(msg, "warning"),
+			});
+			runToolActionSideEffects(
+				pi,
+				ctx,
+				notifyDiscoveryWarnings,
+				response.sideEffects,
 			);
-
-			if (!subagent) {
-				const available =
-					agents.map((candidate) => candidate.name).join(", ") || "none";
-				return toolError(
-					`Unknown subagent: "${params.subagent}". Available: ${available}`,
-				);
-			}
-
-			const ownerSessionId = ctx.sessionManager.getSessionId();
-			const id = crew.spawn(
-				subagent,
-				params.task,
-				ctx.cwd,
-				ownerSessionId,
-				{
-					model: ctx.model,
-					modelRegistry: ctx.modelRegistry,
-					agentDir: getAgentDir(),
-					parentSessionFile: ctx.sessionManager.getSessionFile(),
-					onWarning: (msg) => ctx.ui.notify(msg, "warning"),
-				},
-				extensionDir,
-			);
-
-			return toolSuccess(
-				`Subagent '${subagent.name}' spawned as ${id}. Result will be delivered as a steering message when done.`,
-				{ id, agentName: subagent.name, task: params.task },
-			);
+			return response.result;
 		},
 
 		renderCall(args, theme, _context) {

@@ -2,32 +2,10 @@ import { Type } from "typebox";
 import {
 	renderCrewCall,
 	renderCrewResult,
-	toolError,
-	toolSuccess,
 } from "../tool-presentation.js";
 import type { CrewToolDeps } from "./tool-deps.js";
 
-function formatAbortToolMessage(result: {
-	abortedIds: string[];
-	missingIds: string[];
-	foreignIds: string[];
-}): string {
-	const parts: string[] = [];
-
-	if (result.abortedIds.length > 0) {
-		parts.push(`Aborted ${result.abortedIds.length} subagent(s): ${result.abortedIds.join(", ")}`);
-	}
-	if (result.missingIds.length > 0) {
-		parts.push(`Not found or already finished: ${result.missingIds.join(", ")}`);
-	}
-	if (result.foreignIds.length > 0) {
-		parts.push(`Belong to a different session: ${result.foreignIds.join(", ")}`);
-	}
-
-	return parts.join("\n");
-}
-
-export function registerCrewAbortTool({ pi, crew }: CrewToolDeps): void {
+export function registerCrewAbortTool({ pi, actions }: CrewToolDeps): void {
 	pi.registerTool({
 		name: "crew_abort",
 		label: "Abort Crew",
@@ -57,53 +35,10 @@ export function registerCrewAbortTool({ pi, crew }: CrewToolDeps): void {
 		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const callerSessionId = ctx.sessionManager.getSessionId();
-			const modeCount = Number(Boolean(params.subagent_id))
-				+ Number(Boolean(params.subagent_ids?.length))
-				+ Number(params.all === true);
-
-			if (modeCount !== 1) {
-				return toolError(
-					"Provide exactly one of: subagent_id, subagent_ids, or all=true.",
-				);
-			}
-
-			if (params.all) {
-				const abortedIds = crew.abortAllOwned(callerSessionId, {
-					reason: "Aborted by tool request",
-				});
-				if (abortedIds.length === 0) {
-					return toolError("No active subagents in the current session.");
-				}
-
-				return toolSuccess(
-					`Aborted ${abortedIds.length} subagent(s): ${abortedIds.join(", ")}`,
-					{ ids: abortedIds },
-					{ terminate: true },
-				);
-			}
-
-			const ids = params.subagent_id
-				? [params.subagent_id]
-				: (params.subagent_ids ?? []);
-			const result = crew.abortOwned(ids, callerSessionId, {
-				reason: "Aborted by tool request",
-			});
-			const message = formatAbortToolMessage(result);
-
-			if (result.abortedIds.length === 0) {
-				return toolError(message || "No subagents were aborted.");
-			}
-
-			return toolSuccess(
-				message,
-				{
-					ids: result.abortedIds,
-					missing_ids: result.missingIds,
-					foreign_ids: result.foreignIds,
-				},
-				{ terminate: true },
-			);
+			return actions.abort(params, {
+				cwd: ctx.cwd,
+				callerSessionId: ctx.sessionManager.getSessionId(),
+			}).result;
 		},
 
 		renderCall(args, theme, _context) {

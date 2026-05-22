@@ -1,12 +1,10 @@
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { discoverAgents } from "../../agent-discovery.js";
-import { STATUS_ICON, sendCrewListActiveWarning } from "../../subagent-messages.js";
-import type { CrewToolDeps } from "./tool-deps.js";
+import { runToolActionSideEffects, type CrewToolDeps } from "./tool-deps.js";
 
 export function registerCrewListTool({
 	pi,
-	crew,
+	actions,
 	notifyDiscoveryWarnings,
 }: CrewToolDeps): void {
 	pi.registerTool({
@@ -23,61 +21,17 @@ export function registerCrewListTool({
 		],
 
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-			const { agents, warnings } = discoverAgents(ctx.cwd);
-			notifyDiscoveryWarnings(ctx, warnings);
-			const callerSessionId = ctx.sessionManager.getSessionId();
-			const running = crew.getActiveSummariesForOwner(callerSessionId);
-
-			const lines: string[] = [];
-
-			lines.push("## Available Subagents");
-			if (agents.length === 0) {
-				lines.push(
-					"No valid subagent definitions found. Add `.md` files to `<cwd>/.pi/agents/` or `~/.pi/agent/agents/`.",
-				);
-			} else {
-				for (const agent of agents) {
-					lines.push("");
-					lines.push(`name: ${agent.name}`);
-					lines.push(`description: ${agent.description}`);
-					lines.push(`interactive: ${agent.interactive ? "true" : "false"}`);
-				}
-			}
-
-			if (warnings.length > 0) {
-				lines.push("");
-				lines.push("## Ignored subagent definitions");
-				for (const warning of warnings) {
-					lines.push(`- ${warning.message} (${warning.filePath})`);
-				}
-			}
-
-			lines.push("");
-			lines.push("## Active Subagents");
-			if (running.length === 0) {
-				lines.push("No subagents currently active.");
-			} else {
-				for (const agent of running) {
-					const icon = STATUS_ICON[agent.status] ?? "❓";
-					lines.push("");
-					lines.push(`id: ${agent.id}`);
-					lines.push(`name: ${agent.agentName}`);
-					lines.push(`status: ${icon} ${agent.status}`);
-				}
-			}
-
-			const text = lines.join("\n");
-
-			if (running.length > 0) {
-				Promise.resolve().then(() => {
-					sendCrewListActiveWarning(pi.sendMessage.bind(pi), {
-						isIdle: ctx.isIdle(),
-						triggerTurn: true,
-					});
-				});
-			}
-
-			return { content: [{ type: "text", text }], details: {} };
+			const response = actions.list({
+				cwd: ctx.cwd,
+				callerSessionId: ctx.sessionManager.getSessionId(),
+			});
+			runToolActionSideEffects(
+				pi,
+				ctx,
+				notifyDiscoveryWarnings,
+				response.sideEffects,
+			);
+			return response.result;
 		},
 
 		renderCall(_args, theme, _context) {

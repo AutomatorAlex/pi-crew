@@ -2,8 +2,9 @@ import type {
 	ExtensionAPI,
 	ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import { type AgentDiscoveryWarning } from "../agent-discovery.js";
+import { discoverAgents, type AgentDiscoveryWarning } from "../agent-discovery.js";
 import type { CrewRuntime } from "../runtime/crew-runtime.js";
+import { createCrewToolActions } from "./crew-tool-actions.js";
 import { registerCrewAbortTool } from "./tools/crew-abort.js";
 import { registerCrewDoneTool } from "./tools/crew-done.js";
 import { registerCrewListTool } from "./tools/crew-list.js";
@@ -30,7 +31,12 @@ export function registerCrewTools(
 		}
 	};
 
-	const deps = { pi, crew, extensionDir, notifyDiscoveryWarnings };
+	const actions = createCrewToolActions({
+		crew,
+		discoverAgents,
+		extensionDir,
+	});
+	const deps = { pi, actions, notifyDiscoveryWarnings };
 	registerCrewListTool(deps);
 	registerCrewSpawnTool(deps);
 	registerCrewAbortTool(deps);

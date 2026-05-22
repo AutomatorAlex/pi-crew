@@ -1,18 +1,15 @@
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { Api, AssistantMessage, Model } from "@earendil-works/pi-ai";
-import type { AgentSession, ModelRegistry } from "@earendil-works/pi-coding-agent";
+import type { Api, Model } from "@earendil-works/pi-ai";
+import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { AgentConfig } from "../agent-discovery.js";
 import type { BootstrapContext } from "../bootstrap-session.js";
-import { bootstrapSession } from "../bootstrap-session.js";
 import type { SubagentStatus } from "../subagent-messages.js";
-import { type ActiveRuntimeBinding, DeliveryCoordinator } from "./delivery-coordinator.js";
-import { runPromptWithOverflowRecovery } from "./overflow-recovery.js";
+import { type ActiveRuntimeBinding, OwnerSessionCoordinator } from "./owner-session-coordinator.js";
 import { SubagentRegistry } from "./subagent-registry.js";
+import { SubagentLifecycle } from "./subagent-lifecycle.js";
 import {
 	type ActiveAgentSummary,
 	type SubagentState,
 	isAbortableStatus,
-	isAborted,
 } from "./subagent-state.js";
 
 export type {
@@ -46,63 +43,6 @@ function toBootstrapContext(ctx: SpawnContext): BootstrapContext {
 	};
 }
 
-interface PromptOutcome {
-	status: Extract<SubagentStatus, "done" | "waiting" | "error" | "aborted">;
-	result?: string;
-	error?: string;
-}
-
-function getLastAssistantMessage(
-	messages: AgentMessage[],
-): AssistantMessage | undefined {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const msg = messages[i];
-		if (msg.role === "assistant") {
-			return msg as AssistantMessage;
-		}
-	}
-	return undefined;
-}
-
-function getAssistantText(
-	message: AssistantMessage | undefined,
-): string | undefined {
-	if (!message) return undefined;
-
-	const texts: string[] = [];
-	for (const part of message.content) {
-		if (part.type === "text") {
-			texts.push(part.text);
-		}
-	}
-
-	return texts.length > 0 ? texts.join("\n") : undefined;
-}
-
-function getPromptOutcome(state: SubagentState): PromptOutcome {
-	const lastAssistant = getLastAssistantMessage(state.session!.messages);
-	const text = getAssistantText(lastAssistant);
-
-	if (lastAssistant?.stopReason === "error") {
-		return {
-			status: "error",
-			error: lastAssistant.errorMessage ?? text ?? "(no output)",
-		};
-	}
-
-	if (lastAssistant?.stopReason === "aborted") {
-		return {
-			status: "aborted",
-			error: lastAssistant.errorMessage ?? text ?? "(no output)",
-		};
-	}
-
-	return {
-		status: state.agentConfig.interactive ? "waiting" : "done",
-		result: text ?? "(no output)",
-	};
-}
-
 /**
  * Process-level singleton that owns all durable subagent state.
  *
@@ -113,10 +53,25 @@ function getPromptOutcome(state: SubagentState): PromptOutcome {
  */
 class CrewRuntime {
 	private readonly registry = new SubagentRegistry();
-	private readonly delivery = new DeliveryCoordinator();
+	private readonly ownerSessions: OwnerSessionCoordinator;
+	private readonly lifecycle: SubagentLifecycle;
 
 	// Per-session refresh callbacks, keyed by ownerSessionId
 	private readonly refreshCallbacks = new Map<string, () => void>();
+
+	constructor() {
+		this.ownerSessions = new OwnerSessionCoordinator({
+			countRunningForOwner: (ownerSessionId, excludeId) =>
+				this.registry.countRunningForOwner(ownerSessionId, excludeId),
+			onRefreshOwnerSession: (ownerSessionId) => this.refreshWidgetFor(ownerSessionId),
+		});
+		this.lifecycle = new SubagentLifecycle({
+			isCurrent: (state) => this.registry.hasState(state),
+			onProgress: (ownerSessionId) => this.ownerSessions.refresh(ownerSessionId),
+			onSettled: (state, status, outcome) =>
+				this.settleAgent(state, status, outcome),
+		});
+	}
 
 	private refreshWidgetFor(sessionId: string): void {
 		this.refreshCallbacks.get(sessionId)?.();
@@ -129,16 +84,12 @@ class CrewRuntime {
 		if (refreshWidget) {
 			this.refreshCallbacks.set(binding.sessionId, refreshWidget);
 		}
-		this.delivery.activateSession(
-			binding,
-			(ownerSessionId, excludeId) =>
-				this.registry.countRunningForOwner(ownerSessionId, excludeId),
-		);
+		this.ownerSessions.activateSession(binding);
 		refreshWidget?.();
 	}
 
 	deactivateSession(sessionId: string): void {
-		this.delivery.deactivateSession(sessionId);
+		this.ownerSessions.deactivateSession(sessionId);
 		this.refreshCallbacks.delete(sessionId);
 	}
 
@@ -151,45 +102,14 @@ class CrewRuntime {
 		extensionResolvedPath: string,
 	): string {
 		const state = this.registry.create(agentConfig, task, ownerSessionId);
-		this.refreshWidgetFor(ownerSessionId);
-		void this.spawnSession(
-			state,
+		this.ownerSessions.refresh(ownerSessionId);
+		this.lifecycle.start(state, {
 			cwd,
-			ctx,
+			ctx: toBootstrapContext(ctx),
 			extensionResolvedPath,
-		);
-		return state.id;
-	}
-
-	private attachSessionListeners(
-		state: SubagentState,
-		session: AgentSession,
-	): void {
-		state.unsubscribe = session.subscribe((event) => {
-			if (event.type !== "turn_end") return;
-
-			state.turns++;
-			const msg = event.message;
-			if (msg.role === "assistant") {
-				const assistantMsg = msg as AssistantMessage;
-				state.contextTokens = assistantMsg.usage.totalTokens;
-				state.model = assistantMsg.model;
-			}
-			this.refreshWidgetFor(state.ownerSessionId);
+			onWarning: ctx.onWarning,
 		});
-	}
-
-	private attachSpawnedSession(
-		state: SubagentState,
-		session: AgentSession,
-	): boolean {
-		if (!this.registry.hasState(state)) {
-			session.dispose();
-			return false;
-		}
-
-		state.session = session;
-		return true;
+		return state.id;
 	}
 
 	private settleAgent(
@@ -201,7 +121,7 @@ class CrewRuntime {
 		state.result = opts.result;
 		state.error = opts.error;
 
-		this.delivery.deliver(
+		this.ownerSessions.deliver(
 			state.ownerSessionId,
 			{
 				id: state.id,
@@ -211,14 +131,12 @@ class CrewRuntime {
 				result: state.result,
 				error: state.error,
 			},
-			(ownerSessionId, excludeId) =>
-				this.registry.countRunningForOwner(ownerSessionId, excludeId),
 		);
 
 		if (state.status !== "waiting") {
 			this.disposeAgent(state);
 		} else {
-			this.refreshWidgetFor(state.ownerSessionId);
+			this.ownerSessions.refresh(state.ownerSessionId);
 		}
 	}
 
@@ -227,80 +145,9 @@ class CrewRuntime {
 		state.promptAbortController = undefined;
 		state.session?.dispose();
 		this.registry.delete(state.id);
-		this.refreshWidgetFor(state.ownerSessionId);
+		this.ownerSessions.refresh(state.ownerSessionId);
 	}
 
-	private async runPromptCycle(
-		state: SubagentState,
-		prompt: string,
-	): Promise<void> {
-		if (isAborted(state)) return;
-
-		const abortController = new AbortController();
-		state.promptAbortController = abortController;
-
-		try {
-			const recovery = await runPromptWithOverflowRecovery(
-				state.session!,
-				prompt,
-				abortController.signal,
-			);
-			if (isAborted(state)) return;
-
-			const outcome = getPromptOutcome(state);
-
-			if (recovery === "failed" && outcome.status !== "error") {
-				this.settleAgent(state, "error", {
-					error: "Context overflow recovery failed",
-				});
-				return;
-			}
-
-			this.settleAgent(state, outcome.status, outcome);
-		} catch (err) {
-			if (isAborted(state)) return;
-
-			const error = err instanceof Error ? err.message : String(err);
-			this.settleAgent(state, "error", { error });
-		} finally {
-			state.promptAbortController = undefined;
-		}
-	}
-
-	private async spawnSession(
-		state: SubagentState,
-		cwd: string,
-		ctx: SpawnContext,
-		extensionResolvedPath: string,
-	): Promise<void> {
-		try {
-			if (isAborted(state)) return;
-
-			const { session, warnings } = await bootstrapSession({
-				agentConfig: state.agentConfig,
-				cwd,
-				ctx: toBootstrapContext(ctx),
-				extensionResolvedPath,
-			});
-
-			// Emit bootstrap warnings to UI
-			for (const warning of warnings) {
-				ctx.onWarning?.(warning);
-			}
-
-			if (!this.attachSpawnedSession(state, session)) return;
-
-			this.attachSessionListeners(state, session);
-			await this.runPromptCycle(state, state.task);
-		} catch (err) {
-			if (isAborted(state)) return;
-
-			if (state.status === "running") {
-				const error = err instanceof Error ? err.message : String(err);
-				this.settleAgent(state, "error", { error });
-			}
-		}
-	}
 
 	respond(
 		id: string,
@@ -321,8 +168,8 @@ class CrewRuntime {
 			return { error: `Subagent "${id}" has no active session` };
 
 		state.status = "running";
-		this.refreshWidgetFor(state.ownerSessionId);
-		void this.runPromptCycle(state, message);
+		this.ownerSessions.refresh(state.ownerSessionId);
+		this.lifecycle.respond(state, message);
 		return {};
 	}
 
@@ -344,11 +191,7 @@ class CrewRuntime {
 		const state = this.registry.get(id);
 		if (!state || !isAbortableStatus(state.status)) return false;
 
-		state.promptAbortController?.abort();
-		state.promptAbortController = undefined;
-		state.session?.abortCompaction();
-		state.session?.abortRetry();
-		state.session?.abort().catch(() => {});
+		this.lifecycle.abortPrompt(state);
 		this.settleAgent(state, "aborted", { error: opts.reason });
 		return true;
 	}

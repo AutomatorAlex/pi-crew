@@ -32,7 +32,8 @@
     "video": "https://monkeys-team.ams3.cdn.digitaloceanspaces.com/pi-crew-demo.mp4"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "*",
@@ -47,6 +48,7 @@
     "@earendil-works/pi-coding-agent": "^0.75.1",
     "@earendil-works/pi-tui": "^0.75.1",
     "@types/node": "^22.19.17",
+    "tsx": "^4.22.3",
     "typebox": "^1.1.38",
     "typescript": "^5.9.3"
   }
