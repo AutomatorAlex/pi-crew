@@ -1,11 +1,11 @@
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { runToolActionSideEffects, type CrewToolDeps } from "./tool-deps.js";
+import type { CrewToolDeps } from "../crew-tool-executor.js";
 
 export function registerCrewListTool({
 	pi,
 	actions,
-	notifyDiscoveryWarnings,
+	executor,
 }: CrewToolDeps): void {
 	pi.registerTool({
 		name: "crew_list",
@@ -21,17 +21,7 @@ export function registerCrewListTool({
 		],
 
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
-			const response = actions.list({
-				cwd: ctx.cwd,
-				callerSessionId: ctx.sessionManager.getSessionId(),
-			});
-			runToolActionSideEffects(
-				pi,
-				ctx,
-				notifyDiscoveryWarnings,
-				response.sideEffects,
-			);
-			return response.result;
+			return executor.execute(ctx, (actionCtx) => actions.list(actionCtx));
 		},
 
 		renderCall(_args, theme, _context) {

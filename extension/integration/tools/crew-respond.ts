@@ -3,9 +3,9 @@ import {
 	renderCrewCall,
 	renderCrewResult,
 } from "../tool-presentation.js";
-import type { CrewToolDeps } from "./tool-deps.js";
+import type { CrewToolDeps } from "../crew-tool-executor.js";
 
-export function registerCrewRespondTool({ pi, actions }: CrewToolDeps): void {
+export function registerCrewRespondTool({ pi, actions, executor }: CrewToolDeps): void {
 	pi.registerTool({
 		name: "crew_respond",
 		label: "Respond to Crew",
@@ -27,10 +27,9 @@ export function registerCrewRespondTool({ pi, actions }: CrewToolDeps): void {
 		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			return actions.respond(params, {
-				cwd: ctx.cwd,
-				callerSessionId: ctx.sessionManager.getSessionId(),
-			}).result;
+			return executor.execute(ctx, (actionCtx) =>
+				actions.respond(params, actionCtx),
+			);
 		},
 
 		renderCall(args, theme, _context) {

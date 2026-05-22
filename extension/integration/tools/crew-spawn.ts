@@ -4,12 +4,12 @@ import {
 	renderCrewCall,
 	renderCrewResult,
 } from "../tool-presentation.js";
-import { runToolActionSideEffects, type CrewToolDeps } from "./tool-deps.js";
+import type { CrewToolDeps } from "../crew-tool-executor.js";
 
 export function registerCrewSpawnTool({
 	pi,
 	actions,
-	notifyDiscoveryWarnings,
+	executor,
 }: CrewToolDeps): void {
 	pi.registerTool({
 		name: "crew_spawn",
@@ -31,22 +31,16 @@ export function registerCrewSpawnTool({
 		],
 
 		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			const response = actions.spawn(params, {
-				cwd: ctx.cwd,
-				callerSessionId: ctx.sessionManager.getSessionId(),
-				model: ctx.model,
-				modelRegistry: ctx.modelRegistry,
-				agentDir: getAgentDir(),
-				parentSessionFile: ctx.sessionManager.getSessionFile(),
-				onWarning: (msg) => ctx.ui.notify(msg, "warning"),
-			});
-			runToolActionSideEffects(
-				pi,
-				ctx,
-				notifyDiscoveryWarnings,
-				response.sideEffects,
+			return executor.execute(ctx, (actionCtx) =>
+				actions.spawn(params, {
+					...actionCtx,
+					model: ctx.model,
+					modelRegistry: ctx.modelRegistry,
+					agentDir: getAgentDir(),
+					parentSessionFile: ctx.sessionManager.getSessionFile(),
+					onWarning: (msg) => ctx.ui.notify(msg, "warning"),
+				}),
 			);
-			return response.result;
 		},
 
 		renderCall(args, theme, _context) {

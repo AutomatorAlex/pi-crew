@@ -5,6 +5,7 @@ import type {
 import { discoverAgents, type AgentDiscoveryWarning } from "../agent-discovery.js";
 import type { CrewRuntime } from "../runtime/crew-runtime.js";
 import { createCrewToolActions } from "./crew-tool-actions.js";
+import { CrewToolExecutor } from "./crew-tool-executor.js";
 import { registerCrewAbortTool } from "./tools/crew-abort.js";
 import { registerCrewDoneTool } from "./tools/crew-done.js";
 import { registerCrewListTool } from "./tools/crew-list.js";
@@ -36,7 +37,8 @@ export function registerCrewTools(
 		discoverAgents,
 		extensionDir,
 	});
-	const deps = { pi, actions, notifyDiscoveryWarnings };
+	const executor = new CrewToolExecutor({ pi, notifyDiscoveryWarnings });
+	const deps = { pi, actions, executor };
 	registerCrewListTool(deps);
 	registerCrewSpawnTool(deps);
 	registerCrewAbortTool(deps);
