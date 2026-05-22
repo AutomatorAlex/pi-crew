@@ -18,18 +18,19 @@ Do not rely on hidden active-session context. If the subagent needs a decision, 
 
 ```md
 Intent / context:
-Interactive subagent close should dispose the session without emitting another result. The current behavior appears to duplicate the previous result after `crew_done`.
+Password reset emails should expire after 30 minutes. Users report that old reset links still work several hours later.
 
 Relevant inputs / entry points:
-- `extension/runtime/crew-runtime.ts`: interactive subagent lifecycle and result delivery.
-- `extension/integration/tools/crew-done.ts`: close tool behavior.
+- The password reset request handler.
+- The token validation path used by the reset form.
+- Any configuration or database fields that store token expiry.
 
 Constraints / decisions:
-- Keep ownership and delivery routing unchanged.
-- Do not add cleanup of subagent session files.
+- Preserve the existing email template and reset URL format.
+- Do not change login or account creation behavior.
 
 Deliverable:
-Identify the root cause and minimal fix direction.
+Identify the likely root cause and the smallest safe fix direction.
 ```
 
 ## Bad Briefs

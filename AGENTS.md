@@ -14,7 +14,10 @@
 - Link parent sessions with `SessionManager.newSession({ parentSession })`. Do not use `AgentSession.newSession()` — it disconnects/aborts/resets the subagent.
 - Subagent session files are intentionally never cleaned up. They enable post-hoc inspection via `/resume`. Do not add automatic cleanup.
 - Subagent orchestration state must survive extension module reloads and session replacement. Keep `CrewRuntime` process-global; only session-bound delivery/widget bindings should be rebound per active session.
-- Prompt cycles are wrapped with overflow recovery tracking that observes `agent_end`, `compaction_start`, `compaction_end`, `auto_retry_start`, and `auto_retry_end` events. Outcomes: `"none"` (no overflow), `"recovered"` (overflow handled + retry succeeded), `"failed"` (timeout, cancelled, or compaction did not retry). Do not bypass or short-circuit overflow recovery. When recovery returns `"failed"` and the subagent did not already settle as `error` via stop reason, settle it as `error` with reason "Context overflow recovery failed".
+- Keep `CrewRuntime` as the coordinator over the registry, lifecycle, owner-session delivery, and widget refresh callbacks. Do not move lifecycle, catalog, delivery, or tool-action behavior back into one monolith.
+- Prompt cycles are owned by `SubagentLifecycle` and wrapped with overflow recovery tracking that observes `agent_end`, `compaction_start`, `compaction_end`, `auto_retry_start`, and `auto_retry_end` events. Outcomes: `"none"` (no overflow), `"recovered"` (overflow handled + retry succeeded), `"failed"` (timeout, cancelled, or compaction did not retry). Do not bypass or short-circuit overflow recovery. When recovery returns `"failed"` and the subagent did not already settle as `error` via stop reason, settle it as `error` with reason "Context overflow recovery failed".
+- Discovery, source priority, frontmatter parsing, config overrides, and discovery warnings belong behind `AgentCatalog`; filesystem loading stays in `agent-discovery.ts`.
+- Tool validation, ownership checks, and user-facing tool result text belong in `CrewToolActions`; individual tool registration files should remain thin schema/presentation wrappers.
 
 ### State Lifecycle
 
@@ -30,6 +33,7 @@
 
 ### Message Delivery
 
+- Owner-session delivery, pending queues, remaining-result notes, delayed flushes, and owner widget refresh hooks belong in `OwnerSessionCoordinator`.
 - Results must be routed to the owner session, not the currently active session. If the owner session is not active, queue the result and deliver on `session_start` when that owner becomes active.
 - Check the owner session's streaming state before sending a subagent result. Use `{ triggerTurn: true }` when `isIdle() = true`, and `{ deliverAs: "steer", triggerTurn: true }` when `isIdle() = false`. Sending `deliverAs: "steer"` to an idle session causes the message to sit unprocessed because there is no active turn loop.
 - Subagent completion always sends the same steering message format: subagent name, id, status, and final message. Whether the subagent is interactive or not does not change this message; it only determines whether the session stays open.
@@ -44,6 +48,7 @@
 - Owner identity must use `sessionManager.getSessionId()`, not `getSessionFile()`. `getSessionFile()` returns `undefined` for in-memory sessions, causing all unsaved sessions to share the same owner identity.
 - Each subagent is owned by the session that spawned it. `crew_list`, `crew_abort`, `crew_respond`, `crew_done`, `session_shutdown`, and the status widget must restrict access to the owner session. Removing or bypassing ownership checks causes cross-session subagent interference.
 - `crew_abort` must only abort subagents owned by the current session. It supports single-id, multi-id, and abort-all modes.
+
 ### Session Lifecycle
 
 - `session_shutdown` must always deactivate delivery (`deactivateSession`). On replacement paths (`reload`, `new`, `resume`, `fork`), stop there. On `quit`, also abort running subagents. Pi now provides `session_shutdown.reason` (`quit | reload | new | resume | fork`) plus optional `targetSessionFile`; use that metadata directly instead of pre-switch hacks.
@@ -68,4 +73,5 @@
 
 ```bash
 npm run typecheck
+npm test
 ```
