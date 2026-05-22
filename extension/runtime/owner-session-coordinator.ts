@@ -1,8 +1,8 @@
+import type { SendMessageFn } from "../message-delivery-policy.js";
 import {
 	type SteeringPayload,
 	sendRemainingNote,
 	sendSteeringMessage,
-	type SendMessageFn,
 } from "../subagent-messages.js";
 
 export interface ActiveRuntimeBinding {

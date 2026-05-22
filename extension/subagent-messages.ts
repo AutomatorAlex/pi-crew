@@ -1,8 +1,7 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { sendWithDeliveryPolicy, type SendMessageFn } from "./message-delivery-policy.js";
 
+export type { SendMessageFn } from "./message-delivery-policy.js";
 export type SubagentStatus = "running" | "waiting" | "done" | "error" | "aborted";
-
-export type SendMessageFn = ExtensionAPI["sendMessage"];
 
 export const STATUS_ICON: Record<SubagentStatus, string> = {
 	running: "⏳",
@@ -79,12 +78,7 @@ export function sendSteeringMessage(
 		} satisfies CrewResultMessageDetails,
 	};
 
-	sendMessage(
-		message,
-		opts.isIdle
-			? { triggerTurn: opts.triggerTurn }
-			: { deliverAs: "steer", triggerTurn: opts.triggerTurn },
-	);
+	sendWithDeliveryPolicy(message, sendMessage, opts);
 }
 
 export function sendRemainingNote(
@@ -94,15 +88,14 @@ export function sendRemainingNote(
 ): void {
 	if (remainingCount <= 0) return;
 
-	sendMessage(
+	sendWithDeliveryPolicy(
 		{
 			customType: "crew-remaining",
 			content: `⏳ ${remainingCount} subagent(s) still running`,
 			display: true,
 		},
-		opts.isIdle
-			? { triggerTurn: opts.triggerTurn }
-			: { deliverAs: "steer", triggerTurn: opts.triggerTurn },
+		sendMessage,
+		opts,
 	);
 }
 
@@ -110,15 +103,14 @@ export function sendCrewListActiveWarning(
 	sendMessage: SendMessageFn,
 	opts: { isIdle: boolean; triggerTurn: boolean },
 ): void {
-	sendMessage(
+	sendWithDeliveryPolicy(
 		{
 			customType: "crew-list-warning",
 			content:
 				"⚠ Active subagents detected. Do not poll crew_list for completion — results arrive as steering messages. Continue with unrelated work or end your turn and wait for the steering messages.",
 			display: true,
 		},
-		opts.isIdle
-			? { triggerTurn: opts.triggerTurn }
-			: { deliverAs: "steer", triggerTurn: opts.triggerTurn },
+		sendMessage,
+		opts,
 	);
 }
