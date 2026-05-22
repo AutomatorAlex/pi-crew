@@ -1,17 +1,13 @@
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
+import { renderCrewCall } from "../tool-presentation.js";
 import {
-	renderCrewCall,
-	renderCrewResult,
-} from "../tool-presentation.js";
-import type { CrewToolDeps } from "../crew-tool-executor.js";
+	registerCrewActionTool,
+	type CrewToolDeps,
+} from "../crew-tool-executor.js";
 
-export function registerCrewSpawnTool({
-	pi,
-	actions,
-	executor,
-}: CrewToolDeps): void {
-	pi.registerTool({
+export function registerCrewSpawnTool(deps: CrewToolDeps): void {
+	registerCrewActionTool<{ subagent: string; task: string }>(deps, {
 		name: "crew_spawn",
 		label: "Spawn Crew",
 		description:
@@ -29,20 +25,15 @@ export function registerCrewSpawnTool({
 			"crew_spawn: Results arrive as steering messages; do not poll crew_list or fabricate results.",
 			"crew_spawn: Use the bundled pi-crew skill for detailed delegation patterns.",
 		],
-
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			return executor.execute(ctx, (actionCtx) =>
-				actions.spawn(params, {
-					...actionCtx,
-					model: ctx.model,
-					modelRegistry: ctx.modelRegistry,
-					agentDir: getAgentDir(),
-					parentSessionFile: ctx.sessionManager.getSessionFile(),
-					onWarning: (msg) => ctx.ui.notify(msg, "warning"),
-				}),
-			);
-		},
-
+		action: (params, actionCtx, ctx) =>
+			deps.actions.spawn(params, {
+				...actionCtx,
+				model: ctx.model,
+				modelRegistry: ctx.modelRegistry,
+				agentDir: getAgentDir(),
+				parentSessionFile: ctx.sessionManager.getSessionFile(),
+				onWarning: (msg) => ctx.ui.notify(msg, "warning"),
+			}),
 		renderCall(args, theme, _context) {
 			return renderCrewCall(
 				theme,
@@ -50,10 +41,6 @@ export function registerCrewSpawnTool({
 				args.subagent || "...",
 				args.task,
 			);
-		},
-
-		renderResult(result, _options, theme, _context) {
-			return renderCrewResult(result, theme);
 		},
 	});
 }

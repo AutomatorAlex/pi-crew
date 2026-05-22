@@ -1,10 +1,54 @@
+import { randomBytes } from "node:crypto";
+import type { AgentSession } from "@earendil-works/pi-coding-agent";
 import type { AgentConfig } from "../agent-discovery.js";
-import type { ActiveAgentSummary, SubagentState } from "./subagent-state.js";
-import {
-	buildActiveAgentSummary,
-	generateId,
-} from "./subagent-state.js";
+import type { SubagentStatus } from "../subagent-messages.js";
 import { isAbortableStatus } from "./subagent-transitions.js";
+
+export interface SubagentState {
+	id: string;
+	agentConfig: AgentConfig;
+	task: string;
+	status: SubagentStatus;
+	ownerSessionId: string;
+	session: AgentSession | null;
+	turns: number;
+	contextTokens: number;
+	model: string | undefined;
+	error?: string;
+	result?: string;
+	promptAbortController?: AbortController;
+	unsubscribe?: () => void;
+}
+
+export interface ActiveAgentSummary {
+	id: string;
+	agentName: string;
+	status: SubagentStatus;
+	turns: number;
+	contextTokens: number;
+	model: string | undefined;
+}
+
+function generateId(name: string, existingIds: Set<string>): string {
+	for (let i = 0; i < 10; i++) {
+		const id = `${name}-${randomBytes(4).toString("hex")}`;
+		if (!existingIds.has(id)) return id;
+	}
+	return `${name}-${randomBytes(8).toString("hex")}`;
+}
+
+function buildActiveAgentSummary(
+	state: SubagentState,
+): ActiveAgentSummary {
+	return {
+		id: state.id,
+		agentName: state.agentConfig.name,
+		status: state.status,
+		turns: state.turns,
+		contextTokens: state.contextTokens,
+		model: state.model,
+	};
+}
 
 export class SubagentRegistry {
 	private activeAgents = new Map<string, SubagentState>();

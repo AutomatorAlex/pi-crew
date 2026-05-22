@@ -1,5 +1,5 @@
 import type { SubagentStatus } from "../subagent-messages.js";
-import type { SubagentState } from "./subagent-state.js";
+import type { SubagentState } from "./subagent-registry.js";
 
 export type SettledSubagentStatus = Extract<
 	SubagentStatus,

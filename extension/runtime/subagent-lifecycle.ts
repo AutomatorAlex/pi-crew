@@ -5,7 +5,7 @@ import type { BootstrapContext } from "../bootstrap-session.js";
 import { bootstrapSession } from "../bootstrap-session.js";
 import type { SubagentStatus } from "../subagent-messages.js";
 import { runPromptWithOverflowRecovery } from "./overflow-recovery.js";
-import type { SubagentState } from "./subagent-state.js";
+import type { SubagentState } from "./subagent-registry.js";
 import { isAborted } from "./subagent-transitions.js";
 
 interface PromptOutcome {

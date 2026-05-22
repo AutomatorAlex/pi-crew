@@ -2,7 +2,8 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { crewRuntime } from "./runtime/crew-runtime.js";
-import { registerCrewIntegration } from "./integration.js";
+import { registerCrewMessageRenderers } from "./integration/register-renderers.js";
+import { registerCrewTools } from "./integration/register-tools.js";
 import { updateWidget } from "./status-widget.js";
 
 const extensionDir = dirname(fileURLToPath(import.meta.url));
@@ -59,5 +60,6 @@ export default function (pi: ExtensionAPI) {
 		}
 	});
 
-	registerCrewIntegration(pi, crewRuntime, extensionDir);
+	registerCrewTools(pi, crewRuntime, extensionDir);
+	registerCrewMessageRenderers(pi);
 }

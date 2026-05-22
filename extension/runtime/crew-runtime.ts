@@ -3,12 +3,12 @@ import type { ModelRegistry } from "@earendil-works/pi-coding-agent";
 import type { AgentConfig } from "../agent-discovery.js";
 import type { BootstrapContext } from "../bootstrap-session.js";
 import { type ActiveRuntimeBinding, OwnerSessionCoordinator } from "./owner-session-coordinator.js";
-import { SubagentRegistry } from "./subagent-registry.js";
+import {
+	type ActiveAgentSummary,
+	SubagentRegistry,
+	type SubagentState,
+} from "./subagent-registry.js";
 import { SubagentLifecycle } from "./subagent-lifecycle.js";
-import type {
-	ActiveAgentSummary,
-	SubagentState,
-} from "./subagent-state.js";
 import {
 	type SettledSubagentStatus,
 	canAbortSubagent,
@@ -19,7 +19,7 @@ import {
 
 export type {
 	ActiveAgentSummary,
-} from "./subagent-state.js";
+} from "./subagent-registry.js";
 
 export interface AbortOwnedResult {
 	abortedIds: string[];

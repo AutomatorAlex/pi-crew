@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import type { AgentConfig } from "../extension/agent-discovery.js";
 import type { SubagentStatus } from "../extension/subagent-messages.js";
-import type { SubagentState } from "../extension/runtime/subagent-state.js";
+import type { SubagentState } from "../extension/runtime/subagent-registry.js";
 import {
 	canAbortSubagent,
 	isAbortableStatus,

@@ -1,12 +1,18 @@
 import { Type } from "typebox";
+import { renderCrewCall } from "../tool-presentation.js";
 import {
-	renderCrewCall,
-	renderCrewResult,
-} from "../tool-presentation.js";
-import type { CrewToolDeps } from "../crew-tool-executor.js";
+	registerCrewActionTool,
+	type CrewToolDeps,
+} from "../crew-tool-executor.js";
 
-export function registerCrewAbortTool({ pi, actions, executor }: CrewToolDeps): void {
-	pi.registerTool({
+type CrewAbortParams = {
+	subagent_id?: string;
+	subagent_ids?: string[];
+	all?: boolean;
+};
+
+export function registerCrewAbortTool(deps: CrewToolDeps): void {
+	registerCrewActionTool<CrewAbortParams>(deps, {
 		name: "crew_abort",
 		label: "Abort Crew",
 		description:
@@ -33,13 +39,7 @@ export function registerCrewAbortTool({ pi, actions, executor }: CrewToolDeps): 
 			"crew_abort: Provide exactly one mode: subagent_id, subagent_ids, or all=true.",
 			"crew_abort: Use only when delegated work is obsolete, wrong, or explicitly cancelled.",
 		],
-
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			return executor.execute(ctx, (actionCtx) =>
-				actions.abort(params, actionCtx),
-			);
-		},
-
+		action: (params, actionCtx) => deps.actions.abort(params, actionCtx),
 		renderCall(args, theme, _context) {
 			if (args.all) {
 				return renderCrewCall(theme, "crew_abort", "all");
@@ -51,10 +51,6 @@ export function registerCrewAbortTool({ pi, actions, executor }: CrewToolDeps): 
 
 			const count = Array.isArray(args.subagent_ids) ? args.subagent_ids.length : 0;
 			return renderCrewCall(theme, "crew_abort", `${count} ids`);
-		},
-
-		renderResult(result, _options, theme, _context) {
-			return renderCrewResult(result, theme);
 		},
 	});
 }

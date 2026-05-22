@@ -1,12 +1,12 @@
 import { Type } from "typebox";
+import { renderCrewCall } from "../tool-presentation.js";
 import {
-	renderCrewCall,
-	renderCrewResult,
-} from "../tool-presentation.js";
-import type { CrewToolDeps } from "../crew-tool-executor.js";
+	registerCrewActionTool,
+	type CrewToolDeps,
+} from "../crew-tool-executor.js";
 
-export function registerCrewRespondTool({ pi, actions, executor }: CrewToolDeps): void {
-	pi.registerTool({
+export function registerCrewRespondTool(deps: CrewToolDeps): void {
+	registerCrewActionTool<{ subagent_id: string; message: string }>(deps, {
 		name: "crew_respond",
 		label: "Respond to Crew",
 		description:
@@ -25,13 +25,7 @@ export function registerCrewRespondTool({ pi, actions, executor }: CrewToolDeps)
 			"crew_respond: Use the waiting subagent ID from crew_spawn results or crew_list.",
 			"crew_respond: The response arrives as a steering message; do not poll crew_list.",
 		],
-
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			return executor.execute(ctx, (actionCtx) =>
-				actions.respond(params, actionCtx),
-			);
-		},
-
+		action: (params, actionCtx) => deps.actions.respond(params, actionCtx),
 		renderCall(args, theme, _context) {
 			return renderCrewCall(
 				theme,
@@ -39,10 +33,6 @@ export function registerCrewRespondTool({ pi, actions, executor }: CrewToolDeps)
 				args.subagent_id || "...",
 				args.message,
 			);
-		},
-
-		renderResult(result, _options, theme, _context) {
-			return renderCrewResult(result, theme);
 		},
 	});
 }

@@ -1,12 +1,12 @@
 import { Type } from "typebox";
+import { renderCrewCall } from "../tool-presentation.js";
 import {
-	renderCrewCall,
-	renderCrewResult,
-} from "../tool-presentation.js";
-import type { CrewToolDeps } from "../crew-tool-executor.js";
+	registerCrewActionTool,
+	type CrewToolDeps,
+} from "../crew-tool-executor.js";
 
-export function registerCrewDoneTool({ pi, actions, executor }: CrewToolDeps): void {
-	pi.registerTool({
+export function registerCrewDoneTool(deps: CrewToolDeps): void {
+	registerCrewActionTool<{ subagent_id: string }>(deps, {
 		name: "crew_done",
 		label: "Done with Crew",
 		description:
@@ -19,19 +19,9 @@ export function registerCrewDoneTool({ pi, actions, executor }: CrewToolDeps): v
 			"crew_done: Close a waiting interactive subagent owned by this session.",
 			"crew_done: Use only when no further follow-up is needed; otherwise use crew_respond.",
 		],
-
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-			return executor.execute(ctx, (actionCtx) =>
-				actions.done(params, actionCtx),
-			);
-		},
-
+		action: (params, actionCtx) => deps.actions.done(params, actionCtx),
 		renderCall(args, theme, _context) {
 			return renderCrewCall(theme, "crew_done", args.subagent_id || "...");
-		},
-
-		renderResult(result, _options, theme, _context) {
-			return renderCrewResult(result, theme);
 		},
 	});
 }
