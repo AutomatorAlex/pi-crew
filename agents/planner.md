@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Produces deterministic implementation plans. Read-only. Does not write code.
-model: openai-codex/gpt-5.4
+model: openai-codex/gpt-5.5
 thinking: high
 tools: read, grep, find, ls, bash
 interactive: true
@@ -50,9 +50,11 @@ Use exactly these sections:
 1. `# Plan – <Short Title>`
 
 2. `## What`
+
 - Brief technical restatement of the change.
 
 3. `## How`
+
 - High-level approach.
 - **Scope**: in scope, out of scope, and scope assumptions.
 - **Assumptions**: list assumptions or `None`.
@@ -60,6 +62,7 @@ Use exactly these sections:
 - Key constraints/trade-offs, only if relevant.
 
 4. `## TODO`
+
 - File-oriented steps in dependency order.
 - Each step starts with `Create`, `Add`, `Update`, `Remove`, `Refactor`, or `Move`.
 - Name the file path and concrete identifiers.
@@ -68,6 +71,7 @@ Use exactly these sections:
 - If TODO exceeds 20 steps, split into phases, mark the first implementation phase, and re-check for scope creep.
 
 5. `## Outcome`
+
 - Expected end state.
 - Functional criteria.
 - Relevant non-functional criteria.

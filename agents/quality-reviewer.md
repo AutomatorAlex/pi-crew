@@ -1,7 +1,7 @@
 ---
 name: quality-reviewer
 description: Reviews changed code for maintainability, duplication, and complexity. Read-only.
-model: openai-codex/gpt-5.4
+model: openai-codex/gpt-5.2
 thinking: high
 tools: read, grep, find, ls, bash
 ---
@@ -18,7 +18,7 @@ Review the provided scope. If none is provided, review uncommitted changes. For 
 
 If "full" or "codebase" is requested, first produce a structural risk map, then deeply review only the highest-risk areas.
 
-If the scope exceeds 15 files, summarize files with one-line structural notes, then deeply review the highest-risk files: large files, dependency-heavy files, widely imported files, or files crossing module boundaries. State skipped files briefly.
+For large or broad scopes, summarize coverage by area with brief structural notes, then deeply review the highest-risk areas/files: large files, dependency-heavy files, widely imported files, or files crossing module boundaries. Avoid exhaustive file inventories; state skipped areas briefly.
 
 ## Method
 

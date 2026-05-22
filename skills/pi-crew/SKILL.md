@@ -21,20 +21,23 @@ See [REFERENCE.md](REFERENCE.md) for examples and detailed handling patterns.
 
 ## Spawn Brief
 
-Send a self-contained task. Include only relevant sections:
+Send a self-contained task, but do not fill a template mechanically. Use only sections that add task-specific value, for example:
 
 ```md
-Goal:
-Context:
-Relevant files / entry points:
-Constraints:
-Non-goals:
-Acceptance criteria:
-Expected output:
-Verification:
+Intent / context:
+Relevant inputs / entry points:
+Constraints / decisions:
+Deliverable / expected outcome:
+Verification / checks:
 ```
 
-Include paths, exact errors/output, edit permissions, task type, and constraints when they matter. Prefer path references over copying large file contents.
+Omit sections that would only restate the selected subagent’s role, default scope, edit permissions, output format, or obvious next steps.
+
+Include only information that helps this specific subagent do this specific task: intent, expected outcome, relevant decisions, exact errors/output, unusual constraints, and file paths or entry points that genuinely clarify the task. Use short Markdown sections and bullets when they improve scanability, especially for multi-part intent, constraints, observations, requirements, or acceptance criteria; avoid dense paragraphs.
+
+Do not restate boilerplate implied by the selected subagent’s role, name, or description. Avoid repeating default scope, output format, edit permissions, or repo guidance. Subagents run in the same cwd as the orchestrator, so do not include mechanical Git state they can inspect themselves, such as full changed-file lists, staged/unstaged/untracked inventories, branch/cwd details, or generic project constraints, unless those details define a non-default scope or prevent ambiguity.
+
+If the user points to a plan, spec, issue, design, or doc as task intent, read it when practical and summarize the relevant intent instead of merely passing the path. Prefer explaining why the work matters and what outcome is expected over restating repository state.
 
 ## Result Handling
 

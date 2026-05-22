@@ -86,7 +86,7 @@ Note: This prompt requires the `scout` and `planner` subagent definitions. These
 #### `/pi-crew-review`
 
 Expands a bundled prompt template that orchestrates parallel code and quality reviews.
-Use it to review recent commits, staged changes, unstaged changes, and untracked files with `code-reviewer` and `quality-reviewer`, then merge both results into one report.
+Use it to review provided or default changed-code scope with `code-reviewer` and `quality-reviewer`, using compact task-specific briefs focused on intent, expected behavior, and relevant references, then merge both results into one report.
 
 Note: This prompt requires the `code-reviewer` and `quality-reviewer` subagent definitions. These are included as bundled subagents and work out of the box.
 
@@ -94,7 +94,7 @@ Note: This prompt requires the `code-reviewer` and `quality-reviewer` subagent d
 
 #### `pi-crew`
 
-A bundled orchestration skill that provides best practices for delegating work to subagents, handling asynchronous results, and managing interactive subagent lifecycle. It loads automatically when you coordinate work with pi-crew tools.
+A bundled orchestration skill that provides best practices for delegating work to subagents, handling asynchronous results, and managing interactive subagent lifecycle. It also guides compact, task-specific subagent briefs that avoid repeating role boilerplate or mechanical repo/Git state. It loads automatically when you coordinate work with pi-crew tools.
 
 ## Bundled Subagents
 
@@ -102,12 +102,12 @@ pi-crew ships with six subagent definitions that cover common workflows:
 
 | Subagent             | Purpose                                                                                                                  | Tools                      | Model                       |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------- | --------------------------- |
-| **scout**            | Investigates codebase and returns structured findings. Read-only. Use before planning or implementing to gather context. | read, grep, find, ls, bash | anthropic/claude-haiku-4-5  |
+| **scout**            | Investigates codebase and returns structured findings. Read-only. Use before planning or implementing to gather context. | read, grep, find, ls, bash | openai-codex/gpt-5.5        |
 | **planner**          | Analyzes requirements and produces a step-by-step implementation plan. Read-only. Does not write code. Interactive.      | read, grep, find, ls, bash | openai-codex/gpt-5.4        |
 | **oracle**           | Evaluates critical decisions, surfaces blind spots, and challenges assumptions. Read-only. Does not implement. Interactive. | read, grep, find, ls, bash | openai-codex/gpt-5.4        |
-| **code-reviewer**    | Reviews code changes for bugs, security issues, and correctness. Read-only. Does not fix issues.                         | read, grep, find, ls, bash | openai-codex/gpt-5.4        |
-| **quality-reviewer** | Reviews code structure for maintainability, duplication, and complexity. Read-only. Does not look for bugs.              | read, grep, find, ls, bash | openai-codex/gpt-5.4        |
-| **worker**           | Implements code changes, fixes, and refactors autonomously. Has full read-write access to the codebase.                  | all                        | anthropic/claude-sonnet-4-6 |
+| **code-reviewer**    | Reviews code changes for bugs, security issues, and correctness. Read-only. Does not fix issues.                         | read, grep, find, ls, bash | openai-codex/gpt-5.2        |
+| **quality-reviewer** | Reviews code structure for maintainability, duplication, and complexity. Read-only. Does not look for bugs.              | read, grep, find, ls, bash | openai-codex/gpt-5.2        |
+| **worker**           | Implements code changes, fixes, and refactors autonomously. Has full read-write access to the codebase.                  | all                        | openai-codex/gpt-5.5        |
 
 Read-only bundled subagents still keep `bash` for inspection workflows like `git` and `ast-grep`. This is an instruction-level contract, not a sandbox boundary.
 

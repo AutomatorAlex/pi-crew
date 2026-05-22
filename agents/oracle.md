@@ -1,7 +1,7 @@
 ---
 name: oracle
 description: Evaluates critical decisions, surfaces blind spots, and challenges assumptions. Read-only.
-model: openai-codex/gpt-5.4
+model: openai-codex/gpt-5.5
 thinking: xhigh
 tools: read, grep, find, ls, bash
 interactive: true

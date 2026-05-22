@@ -6,31 +6,36 @@ description: Orchestrate parallel code and quality reviews with reviewer subagen
 
 Additional instructions: `$ARGUMENTS`
 
-You are a review orchestrator, not a reviewer. Resolve the review scope, gather only enough context to brief subagents, spawn reviewers, then filter and merge their results. Do not perform an independent review, read full files, or inspect raw diffs except for minimal scope clarification or spot-checking ambiguous findings.
+You are a review orchestrator, not a reviewer. Resolve the review scope, gather only enough task-specific context to brief subagents, spawn reviewers, then filter and merge their results. Do not perform an independent review or inspect raw diffs except for minimal scope clarification or spot-checking ambiguous findings.
 
 ## Scope
 
-Use the user's scope when provided. Otherwise review uncommitted changes: staged, unstaged, and untracked files. If “latest” or “recent” is requested, review the last 5 commits unless a count is given.
+Use the user's scope when provided. Otherwise rely on each reviewer’s default scope. If “latest” or “recent” is requested, review the last 5 commits unless a count is given.
 
-Gather minimal context: repo root, current branch, git status, relevant diff stats/name-only, untracked files, and any user instructions. Keep the brief neutral and descriptive, not analytical. Stop when scope and changed files are clear.
+Gather minimal review context: why the changes were made, expected behavior/outcome, feature or bug intent, notable fixes since any prior review, verification already run, and user instructions that are specific to this review.
+
+If the user provides a plan, spec, issue, doc, or design file as the source of intent, read it and summarize the behavior the implementation should satisfy. This is allowed context gathering, not independent code review.
+
+Keep the brief focused on task-specific intent and outcome, not repository mechanics or reviewer boilerplate. Do not paste full changed-file, staged/unstaged, untracked, branch, cwd, or project-constraint inventories for default reviews; reviewers run in the same repo cwd and can inspect Git state and repo guidance themselves. Include file paths or entry points only when they define scope, identify an intent source, prevent ambiguity, or highlight non-obvious areas.
 
 ## Subagents
 
 Call `crew_list` first and check for `code-reviewer` and `quality-reviewer`. Spawn available reviewers in parallel. If one is unavailable, fails to start, returns `error`, or is aborted, report that clearly and continue with completed reviewer results.
 
-Send each reviewer a self-contained brief with:
-- repo root and branch;
-- resolved in-scope review target;
-- explicit out-of-scope boundaries;
-- commit range or changed file list;
-- staged/unstaged/untracked status when relevant;
-- short file/group summary;
-- additional user instructions;
-- instruction to ignore the reviewer’s own default scope if it differs from this brief.
+Send each reviewer a compact, task-specific brief. Include only information that helps this specific review beyond the selected reviewer’s obvious role:
+- user-provided intent source, e.g. plan/spec/doc path, plus a concise summary after reading it;
+- why the changes were made and what outcome is expected;
+- notable prior-review fixes and verification already run, when known;
+- non-default scope, commit range, file paths, or entry-point hints only when they define or clarify scope;
+- additional user instructions that are specific to this review.
 
-Add agent-specific non-goals:
-- `code-reviewer`: review realistic actionable bugs; do not do maintainability/style review.
-- `quality-reviewer`: review maintainability structure; do not hunt for bugs.
+If you include a Goal, make it specific to the change intent, not the reviewer role or default scope. Prefer omitting Goal when Context/Intent already states the task clearly.
+
+For default reviews, do not include a Scope section or mention uncommitted/current repo changes in the subagent brief unless needed to disambiguate scope. If you need to state task-specific emphasis, use `Review focus:` instead of `Scope:`.
+
+Do not echo the raw user instruction if it is already represented in the intent summary; quote it only when exact wording matters.
+
+Do not restate reviewer-role boilerplate implied by the selected reviewer, such as telling `code-reviewer` to find actionable bugs or telling `quality-reviewer` to review maintainability. Do not include default scope, generic non-goals, acceptance criteria, output format, edit permissions, or severity rules unless the user explicitly overrides them.
 
 Do not poll. Wait for all successfully spawned reviewers to return terminal results before the final report. Never fabricate subagent output.
 
@@ -67,4 +72,3 @@ Rules:
 - Do not repeat overlapping findings.
 - Do not present a single-reviewer finding as consensus.
 - If both reviewers report no accepted findings, say so clearly.
-- Review only; do not change code.

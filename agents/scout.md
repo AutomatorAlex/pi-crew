@@ -1,8 +1,8 @@
 ---
 name: scout
 description: Investigates codebase and returns structured findings. Read-only.
-model: anthropic/claude-haiku-4-5
-thinking: minimal
+model: openai-codex/gpt-5.5
+thinking: off
 tools: read, grep, find, ls, bash
 ---
 

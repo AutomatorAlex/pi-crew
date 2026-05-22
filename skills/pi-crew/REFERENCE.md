@@ -2,30 +2,34 @@
 
 ## Delegation Checklist
 
-Before `crew_spawn`, ensure the brief includes:
+Before `crew_spawn`, ensure the brief is self-contained but not mechanically templated. Include only information that helps this specific subagent do this specific task:
 
-- User goal and agreed decisions.
-- Relevant files, symbols, entry points, commands, errors, or logs.
-- Scope, constraints, and non-goals.
-- Whether the subagent may edit files or must only report.
-- Whether the task is exploratory, implementation, review, planning, or verification.
-- Expected output format.
-- Acceptance criteria.
-- Verification command, if known.
+- Intent, expected outcome, and relevant user decisions.
+- User-provided references, plus a concise summary after reading them when practical.
+- File paths, symbols, entry points, commands, errors, or logs only when they genuinely clarify the task.
+- Non-default scope, constraints, assumptions, or verification context only when they matter.
+- Gaps or unresolved questions the subagent should account for.
 
-Do not rely on hidden active-session context. If the subagent needs it, include it.
+Do not restate boilerplate implied by the selected subagent’s role, name, or description. Avoid repeating default scope, edit permissions, output format, generic repo guidance, cwd/branch details, or mechanical Git state the subagent can inspect itself.
+
+Do not rely on hidden active-session context. If the subagent needs a decision, conclusion, user intent, or prior result that is not discoverable from files/tools, include it.
 
 ## Good Brief
 
 ```md
-Goal: Investigate why `crew_done` emits duplicate result messages.
-Context: Closing an interactive subagent should dispose the session without sending another result.
-Relevant files / entry points: `extension/runtime/crew-runtime.ts`, `extension/integration/tools/crew-done.ts`, `AGENTS.md`.
-Constraints: Do not change tool schemas. Do not edit unrelated lifecycle behavior.
-Non-goals: Do not refactor session ownership or delivery routing.
-Acceptance criteria: Identify root cause and minimal fix direction.
-Expected output: Root cause, minimal fix proposal, and verification command. Do not edit files.
-Verification: `npm run typecheck` if implementation is later requested.
+Intent / context:
+Interactive subagent close should dispose the session without emitting another result. The current behavior appears to duplicate the previous result after `crew_done`.
+
+Relevant inputs / entry points:
+- `extension/runtime/crew-runtime.ts`: interactive subagent lifecycle and result delivery.
+- `extension/integration/tools/crew-done.ts`: close tool behavior.
+
+Constraints / decisions:
+- Keep ownership and delivery routing unchanged.
+- Do not add cleanup of subagent session files.
+
+Deliverable:
+Identify the root cause and minimal fix direction.
 ```
 
 ## Bad Briefs
@@ -42,7 +46,14 @@ Investigate the bug we discussed.
 Implement the plan.
 ```
 
-These depend on hidden conversation state and produce inconsistent results.
+```md
+Goal: Review the current uncommitted changes for actionable bugs.
+Scope: Current repo changes, staged/unstaged/untracked files.
+Non-goals: Do not modify files.
+Expected output: Findings with severity and fix direction.
+```
+
+These depend on hidden conversation state, restate subagent boilerplate, or carry mechanical repository state instead of task-specific intent.
 
 ## Parallel Delegation
 
@@ -57,7 +68,7 @@ If ownership overlaps, serialize the work.
 ## Failure and Conflict Handling
 
 - If a subagent errors or aborts, report that status clearly and continue only if remaining results are sufficient.
-- If a result misses acceptance criteria, ask a focused follow-up or spawn a new subagent with a corrected brief.
+- If a result misses the task-specific deliverable, ask a focused follow-up or spawn a new subagent with a corrected brief.
 - If results conflict, do not average them or pick silently. State the conflict, compare evidence, and resolve only with available facts or a targeted follow-up.
 - If a task becomes obsolete, abort the relevant active subagent.
 
