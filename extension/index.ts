@@ -1,10 +1,9 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { crewRuntime } from "./runtime/crew-runtime.js";
-import { registerCrewMessageRenderers } from "./integration/register-renderers.js";
-import { registerCrewTools } from "./integration/register-tools.js";
-import { updateWidget } from "./status-widget.js";
+import { crewRuntime } from "./crew.js";
+import { registerCrewTools } from "./tools.js";
+import { registerCrewMessageRenderers, updateWidget } from "./ui.js";
 
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 
@@ -19,11 +18,11 @@ function setupProcessHooks() {
 	if (globalWithProcessHooks[processHooksSetupKey]) return;
 	globalWithProcessHooks[processHooksSetupKey] = true;
 
-	process.once('SIGINT', () => {
+	process.once("SIGINT", () => {
 		crewRuntime.abortAll();
 		process.exit(130);
 	});
-	process.on('beforeExit', () => crewRuntime.abortAll());
+	process.on("beforeExit", () => crewRuntime.abortAll());
 }
 
 export default function (pi: ExtensionAPI) {
