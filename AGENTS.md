@@ -11,18 +11,17 @@ pi-crew is a pi coding agent extension for non-blocking subagent orchestration. 
 - Do not replace `SessionManager.newSession({ parentSession })` with `AgentSession.newSession()` for subagents.
 - Do not add automatic cleanup for subagent session files.
 - Do not use `getSessionFile()` as owner identity; ownership must use `sessionManager.getSessionId()`.
-- Do not bypass or short-circuit overflow recovery around prompt cycles.
+- Do not add custom overflow-recovery wrappers around prompt cycles; rely on `AgentSession.prompt()` to run pi-core compaction/retry to completion.
 - Do not make `crew_respond` block the caller session while the subagent runs.
 - Do not make `crew_done` emit a steering message.
 - Do not send idle owner-session messages with `deliverAs: "steer"`.
-- Do not embed remaining-subagent counts inside `crew-result`; keep `crew-remaining` separate.
 - Do not collapse tool-triggered aborts and shutdown cleanup into the same abort reason.
 - Ask before adding dependencies, CI checks, baselines, ratchets, or broad enforcement.
 
 ## Invariants & Decisions
 
 - Context: Extension module shape.
-  Rule: Keep orchestration concentrated in `crew.ts`, SDK session mechanics in `subagent-session.ts`, discovery/config in `catalog.ts`, tools in `tools.ts`, UI/message/widget behavior in `ui.ts`, overflow recovery in `overflow-recovery.ts`, and pi hook wiring in `index.ts`.
+  Rule: Keep orchestration concentrated in `crew.ts`, SDK session mechanics in `subagent-session.ts`, discovery/config in `catalog.ts`, tools in `tools.ts`, UI/message/widget behavior in `ui.ts`, and pi hook wiring in `index.ts`.
   Reason: The minimal architecture keeps lifecycle, ownership, delivery, and testing local without recreating shallow wrapper layers.
 
 - Context: Process lifetime.
@@ -38,8 +37,8 @@ pi-crew is a pi coding agent extension for non-blocking subagent orchestration. 
   Reason: They support post-hoc inspection and resume workflows.
 
 - Context: Prompt cycles.
-  Rule: Prompt execution must be wrapped with overflow recovery that observes `agent_end`, `compaction_start`, `compaction_end`, `auto_retry_start`, and `auto_retry_end`.
-  Reason: Context overflow recovery is load-bearing; failed recovery must settle as `error` with "Context overflow recovery failed" unless the subagent already settled via stop reason.
+  Rule: Run subagent prompt cycles with `AgentSession.prompt()` directly; pi-core handles context overflow compaction and retry before `prompt()` resolves.
+  Reason: A custom event-tracking recovery wrapper duplicates pi-core behavior and can add unnecessary waiting, timeouts, and failure modes.
 
 - Context: Subagent states.
   Rule: The only states are `running`, `waiting`, `done`, `error`, and `aborted`; only `running` and `waiting` are abortable and visible in active summaries.
@@ -71,15 +70,15 @@ pi-crew is a pi coding agent extension for non-blocking subagent orchestration. 
 
 - Context: Pending flush after session activation.
   Rule: Pending message flush in `activateSession` must be deferred to the next macrotask.
-  Reason: Pi-core can emit `session_start` before reconnecting the agent event listener; synchronous delivery can lose JSONL persistence.
+  Reason: Runtime resume testing showed synchronous delivery can trigger a turn before the resumed TUI renders the queued `crew-result`; deferral preserves visible delivery across session switches.
 
 - Context: Idle versus streaming delivery.
   Rule: Idle sessions receive `{ triggerTurn }`; streaming sessions receive `{ deliverAs: "steer", triggerTurn }`.
   Reason: Sending `deliverAs: "steer"` to an idle session can leave the message unprocessed.
 
 - Context: Remaining subagents.
-  Rule: When other subagents for the same owner are still running, send `crew-result` first and a separate `crew-remaining` note after it; if idle, only the remaining note should trigger the next turn.
-  Reason: The owner session must see result and remaining status in order without prematurely triggering on a partial result.
+  Rule: When other subagents for the same owner are still running, deliver completed subagents' `crew-result` messages without triggering an idle owner turn; `waiting` interactive subagents must still trigger a turn.
+  Reason: The owner session should not be prompted to respond to intermediate status-only updates, but interactive subagents that need input must wake the owner.
 
 - Context: Session shutdown.
   Rule: `session_shutdown` always deactivates delivery; replacement paths (`reload`, `new`, `resume`, `fork`) stop there, while `quit` also aborts running subagents.
@@ -122,7 +121,7 @@ pi-crew is a pi coding agent extension for non-blocking subagent orchestration. 
   Reason: Bloated briefs waste context and can obscure the specific delegated task.
 
 - Context: Tests.
-  Rule: Tests should target the minimal public behavior surfaces: `catalog`, `crew`, `tools`, and package metadata; use `CrewRuntime`'s runner seam for lifecycle tests.
+  Rule: Tests should target the minimal public behavior surfaces: `catalog`, `crew`, `tools`, `index` lifecycle wiring, and package metadata; use `CrewRuntime`'s runner seam for subagent lifecycle tests.
   Reason: Testing old internal helper seams or obvious pass-through registration recreates the architecture the refactor removed.
 
 ## Commands

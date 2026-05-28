@@ -194,18 +194,20 @@ describe("CrewRuntime", () => {
 		assert.equal(sent.length, 0);
 	});
 
-	it("uses remaining-note and streaming delivery policies", () => {
+	it("suppresses intermediate idle done turns and uses streaming delivery policy", () => {
 		const idle = setup({ isIdle: true });
 		idle.crew.activateSession(idle.binding);
 		const first = spawn(idle.crew);
-		spawn(idle.crew);
+		const second = spawn(idle.crew);
 
 		idle.runner.settle(first, "done", { result: "first done" });
 
-		assert.equal(idle.sent.length, 2);
+		assert.equal(idle.sent.length, 1);
 		assert.equal(idle.sent[0]?.message.customType, "crew-result");
 		assert.deepEqual(idle.sent[0]?.options, { triggerTurn: false });
-		assert.equal(idle.sent[1]?.message.customType, "crew-remaining");
+
+		idle.runner.settle(second, "done", { result: "second done" });
+		assert.equal(idle.sent.length, 2);
 		assert.deepEqual(idle.sent[1]?.options, { triggerTurn: true });
 
 		const streaming = setup({ isIdle: false });
@@ -213,5 +215,18 @@ describe("CrewRuntime", () => {
 		const id = spawn(streaming.crew);
 		streaming.runner.settle(id, "done", { result: "streaming done" });
 		assert.deepEqual(streaming.sent[0]?.options, { deliverAs: "steer", triggerTurn: true });
+	});
+
+	it("triggers idle owner turns for waiting interactive subagents even when others are running", () => {
+		const { crew, runner, binding, sent } = setup({ isIdle: true });
+		crew.activateSession(binding);
+		const interactive = spawn(crew, "owner-1", { ...agentConfig, interactive: true });
+		spawn(crew);
+
+		runner.settle(interactive, "waiting", { result: "need input" });
+
+		assert.equal(sent.length, 1);
+		assert.equal(sent[0]?.message.customType, "crew-result");
+		assert.deepEqual(sent[0]?.options, { triggerTurn: true });
 	});
 });

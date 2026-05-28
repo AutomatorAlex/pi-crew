@@ -35,6 +35,8 @@ Omit sections that would only restate the selected subagent’s role, default sc
 
 Include only information that helps this specific subagent do this specific task: intent, expected outcome, relevant decisions, exact errors/output, unusual constraints, and file paths or entry points that genuinely clarify the task. Use short Markdown sections and bullets when they improve scanability, especially for multi-part intent, constraints, observations, requirements, or acceptance criteria; avoid dense paragraphs.
 
+For repeated workflows, make each spawn brief independent. Do not assume a new subagent knows earlier loop results, owner-session discussion, or what another subagent saw. If prior findings, fixes, decisions, or verification matter, summarize the concrete facts or point to durable artifacts the subagent can inspect. Avoid vague references like “we fixed the first review findings” unless you also state what those findings/fixes were or define the current review target without relying on that history.
+
 Do not restate boilerplate implied by the selected subagent’s role, name, or description. Avoid repeating default scope, output format, edit permissions, or repo guidance. Subagents run in the same cwd as the orchestrator, so do not include mechanical Git state they can inspect themselves, such as full changed-file lists, staged/unstaged/untracked inventories, branch/cwd details, or generic project constraints, unless those details define a non-default scope or prevent ambiguity.
 
 If the user points to a plan, spec, issue, design, or doc as task intent, read it when practical and summarize the relevant intent instead of merely passing the path. Prefer explaining why the work matters and what outcome is expected over restating repository state.
@@ -44,7 +46,7 @@ If the user points to a plan, spec, issue, design, or doc as task intent, read i
 - Wait for subagent results before using them. Never invent or predict results.
 - Evaluate each result against the task acceptance criteria.
 - If results conflict, are incomplete, or miss criteria, state that clearly and use a follow-up or new spawn only when needed.
-- After spawning, continue only with unrelated work or end the turn.
+- After spawning, do not work on the delegated task; wait for results, continue only with unrelated work, or end the turn.
 
 ## Interactive Subagents
 

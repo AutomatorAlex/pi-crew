@@ -8,7 +8,6 @@ import {
 	type SendMessageFn,
 	type SteeringPayload,
 	type SubagentStatus,
-	sendRemainingNote,
 	sendSteeringMessage,
 } from "./ui.js";
 
@@ -36,7 +35,6 @@ export interface SubagentState {
 	model: string | undefined;
 	error?: string;
 	result?: string;
-	promptAbortController?: AbortController;
 	unsubscribe?: () => void;
 }
 
@@ -271,7 +269,6 @@ export class CrewRuntime {
 
 	private disposeAgent(state: SubagentState): void {
 		state.unsubscribe?.();
-		state.promptAbortController = undefined;
 		state.session?.dispose();
 		this.agents.delete(state.id);
 		this.refreshWidgetFor(state.ownerSessionId);
@@ -320,8 +317,6 @@ export class CrewRuntime {
 	private schedulePendingFlushFor(sessionId: string): void {
 		if (!this.pendingMessages.some((entry) => entry.ownerSessionId === sessionId)) return;
 
-		// Delay flush to next macrotask. session_start fires before pi-core reconnects the
-		// agent event listener; synchronous delivery can lose JSONL persistence.
 		this.flushScheduled = true;
 		this.scheduleFlush(() => {
 			this.flushScheduled = false;
@@ -370,10 +365,9 @@ export class CrewRuntime {
 
 		const remaining = this.countRunningForOwner(ownerSessionId, payload.id);
 		const isIdle = this.activeBinding.isIdle();
-		const triggerResultTurn = !(isIdle && remaining > 0);
+		const triggerResultTurn = payload.status === "waiting" || !(isIdle && remaining > 0);
 
 		sendSteeringMessage(payload, this.activeBinding.sendMessage, { isIdle, triggerTurn: triggerResultTurn });
-		sendRemainingNote(remaining, this.activeBinding.sendMessage, { isIdle, triggerTurn: isIdle && remaining > 0 });
 	}
 }
 

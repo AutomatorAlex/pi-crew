@@ -1,11 +1,24 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { crewRuntime } from "./crew.js";
+import { crewRuntime, type CrewRuntime } from "./crew.js";
 import { registerCrewTools } from "./tools.js";
 import { registerCrewMessageRenderers, updateWidget } from "./ui.js";
 
 const extensionDir = dirname(fileURLToPath(import.meta.url));
+
+interface ProcessHooks {
+	once(event: "SIGINT", listener: () => void): unknown;
+	on(event: "beforeExit", listener: () => void): unknown;
+	exit(code?: number): never;
+}
+
+interface RegisterPiCrewExtensionOptions {
+	crew?: CrewRuntime;
+	extensionDir?: string;
+	processHooks?: ProcessHooks;
+	processHooksSetupKey?: symbol;
+}
 
 // Process-level cleanup for subagents on exit
 const processHooksSetupKey = Symbol.for("pi-crew.processHooksSetup");
@@ -14,29 +27,30 @@ const globalWithProcessHooks = globalThis as typeof globalThis & Record<
 	boolean | undefined
 >;
 
-function setupProcessHooks() {
-	if (globalWithProcessHooks[processHooksSetupKey]) return;
-	globalWithProcessHooks[processHooksSetupKey] = true;
+function setupProcessHooks(crew: CrewRuntime, processHooks: ProcessHooks, setupKey: symbol) {
+	if (globalWithProcessHooks[setupKey]) return;
+	globalWithProcessHooks[setupKey] = true;
 
-	process.once("SIGINT", () => {
-		crewRuntime.abortAll();
-		process.exit(130);
+	processHooks.once("SIGINT", () => {
+		crew.abortAll();
+		processHooks.exit(130);
 	});
-	process.on("beforeExit", () => crewRuntime.abortAll());
+	processHooks.on("beforeExit", () => crew.abortAll());
 }
 
-export default function (pi: ExtensionAPI) {
+export function registerPiCrewExtension(pi: ExtensionAPI, options: RegisterPiCrewExtensionOptions = {}) {
+	const crew = options.crew ?? crewRuntime;
 	let currentCtx: ExtensionContext | undefined;
 
-	setupProcessHooks();
+	setupProcessHooks(crew, options.processHooks ?? process, options.processHooksSetupKey ?? processHooksSetupKey);
 
 	const refreshWidget = () => {
-		if (currentCtx) updateWidget(currentCtx, crewRuntime);
+		if (currentCtx) updateWidget(currentCtx, crew);
 	};
 
 	const activateSession = (ctx: ExtensionContext) => {
 		currentCtx = ctx;
-		crewRuntime.activateSession(
+		crew.activateSession(
 			{
 				sessionId: ctx.sessionManager.getSessionId(),
 				isIdle: () => ctx.isIdle(),
@@ -52,13 +66,17 @@ export default function (pi: ExtensionAPI) {
 
 	pi.on("session_shutdown", (event, ctx) => {
 		const sessionId = ctx.sessionManager.getSessionId();
-		crewRuntime.deactivateSession(sessionId);
+		crew.deactivateSession(sessionId);
 
 		if (event.reason === "quit") {
-			crewRuntime.abortAll();
+			crew.abortAll();
 		}
 	});
 
-	registerCrewTools(pi, crewRuntime, extensionDir);
+	registerCrewTools(pi, crew, options.extensionDir ?? extensionDir);
 	registerCrewMessageRenderers(pi);
+}
+
+export default function (pi: ExtensionAPI) {
+	registerPiCrewExtension(pi);
 }

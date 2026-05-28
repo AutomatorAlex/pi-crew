@@ -12,7 +12,6 @@ import type { AgentConfig } from "./catalog.js";
 import { SUPPORTED_TOOL_NAMES, type SupportedToolName } from "./catalog.js";
 import type { SubagentState } from "./crew.js";
 import type { SubagentStatus } from "./ui.js";
-import { runPromptWithOverflowRecovery } from "./overflow-recovery.js";
 
 export interface BootstrapContext {
 	model: Model<Api> | undefined;
@@ -188,10 +187,7 @@ export class SubagentSessionRunner implements SubagentRunner {
 	}
 
 	abort(state: SubagentState): void {
-		state.promptAbortController?.abort();
-		state.promptAbortController = undefined;
 		state.session?.abortCompaction();
-		state.session?.abortRetry();
 		state.session?.abort().catch(() => {});
 	}
 
@@ -221,25 +217,16 @@ export class SubagentSessionRunner implements SubagentRunner {
 	private async runPromptCycle(state: SubagentState, prompt: string): Promise<void> {
 		if (isAborted(state)) return;
 
-		const abortController = new AbortController();
-		state.promptAbortController = abortController;
-
 		try {
-			const recovery = await runPromptWithOverflowRecovery(state.session!, prompt, abortController.signal);
+			await state.session!.prompt(prompt);
 			if (isAborted(state)) return;
 
 			const outcome = getPromptOutcome(state);
-			if (recovery === "failed" && outcome.status !== "error") {
-				this.callbacks.onSettled(state, "error", { error: "Context overflow recovery failed" });
-				return;
-			}
 			this.callbacks.onSettled(state, outcome.status, outcome);
 		} catch (err) {
 			if (isAborted(state)) return;
 			const error = err instanceof Error ? err.message : String(err);
 			this.callbacks.onSettled(state, "error", { error });
-		} finally {
-			state.promptAbortController = undefined;
 		}
 	}
 

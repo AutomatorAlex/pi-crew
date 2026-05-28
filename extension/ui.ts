@@ -104,23 +104,6 @@ export function sendSteeringMessage(
 	);
 }
 
-export function sendRemainingNote(
-	remainingCount: number,
-	sendMessage: SendMessageFn,
-	opts: { isIdle: boolean; triggerTurn: boolean },
-): void {
-	if (remainingCount <= 0) return;
-	sendWithDeliveryPolicy(
-		{
-			customType: "crew-remaining",
-			content: `⏳ ${remainingCount} subagent(s) still running`,
-			display: true,
-		},
-		sendMessage,
-		opts,
-	);
-}
-
 export function sendCrewListActiveWarning(
 	sendMessage: SendMessageFn,
 	opts: { isIdle: boolean; triggerTurn: boolean },
@@ -193,7 +176,6 @@ export function registerCrewMessageRenderers(pi: ExtensionAPI): void {
 		return box;
 	});
 
-	pi.registerMessageRenderer("crew-remaining", (message, _options, theme) => renderWarningMessage(message.content, theme));
 	pi.registerMessageRenderer("crew-list-warning", (message, _options, theme) => renderWarningMessage(message.content, theme));
 }
 
