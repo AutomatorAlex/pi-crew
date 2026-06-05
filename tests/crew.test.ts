@@ -6,7 +6,7 @@ import {
 	type SubagentState,
 } from "../extension/crew.js";
 import type { AgentConfig } from "../extension/catalog.js";
-import type { SubagentRunner, SubagentRunnerCallbacks } from "../extension/subagent-session.js";
+import { formatSubagentSessionName, type SubagentRunner, type SubagentRunnerCallbacks } from "../extension/subagent-session.js";
 import type { SubagentStatus } from "../extension/ui.js";
 
 const agentConfig: AgentConfig = {
@@ -87,10 +87,20 @@ function spawn(crew: CrewRuntime, ownerSessionId = "owner-1", config: AgentConfi
 		"task",
 		"/repo",
 		ownerSessionId,
-		{ model: undefined, modelRegistry: {} as never, agentDir: "/home/.pi/agent" },
+		{ model: undefined, modelRegistry: {} as never, agentDir: "/home/.pi/agent", brief: "task brief" },
 		"/pkg/extension",
 	);
 }
+
+describe("subagent session names", () => {
+	it("formats session names from explicit brief without deriving from task body", () => {
+		assert.equal(
+			formatSubagentSessionName({ id: "scout-1234", agentConfig, brief: " inspect pi update impact\n" }),
+			"crew: scout · inspect pi update impact",
+		);
+		assert.equal(formatSubagentSessionName({ id: "scout-1234", agentConfig, brief: "\t\n" }), "crew: scout · scout-1234");
+	});
+});
 
 describe("CrewRuntime", () => {
 	it("spawns active jobs and settles non-interactive jobs with result delivery and cleanup", () => {

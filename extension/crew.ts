@@ -27,6 +27,7 @@ export interface SubagentState {
 	id: string;
 	agentConfig: AgentConfig;
 	task: string;
+	brief: string;
 	status: SubagentStatus;
 	ownerSessionId: string;
 	session: AgentSession | null;
@@ -63,6 +64,7 @@ export interface SpawnContext {
 	agentDir: string;
 	parentSessionFile?: string;
 	onWarning?: (message: string) => void;
+	brief?: string;
 }
 
 type SettledSubagentStatus = Extract<SubagentStatus, "done" | "waiting" | "error" | "aborted">;
@@ -149,7 +151,7 @@ export class CrewRuntime {
 		ctx: SpawnContext,
 		extensionResolvedPath: string,
 	): string {
-		const state = this.createAgent(agentConfig, task, ownerSessionId);
+		const state = this.createAgent(agentConfig, task, ctx.brief ?? "", ownerSessionId);
 		this.refreshWidgetFor(ownerSessionId);
 		this.runner.start(state, {
 			cwd,
@@ -226,12 +228,13 @@ export class CrewRuntime {
 			.map(buildActiveAgentSummary);
 	}
 
-	private createAgent(agentConfig: AgentConfig, task: string, ownerSessionId: string): SubagentState {
+	private createAgent(agentConfig: AgentConfig, task: string, brief: string, ownerSessionId: string): SubagentState {
 		const id = generateId(agentConfig.name, new Set(this.agents.keys()));
 		const state: SubagentState = {
 			id,
 			agentConfig,
 			task,
+			brief,
 			status: "running",
 			ownerSessionId,
 			session: null,
@@ -371,7 +374,17 @@ export class CrewRuntime {
 	}
 }
 
+const CREW_RUNTIME_VERSION = 2;
 const crewRuntimeKey = Symbol.for("pi-crew.runtime");
-const globalWithCrewRuntime = globalThis as typeof globalThis & Record<symbol, CrewRuntime | undefined>;
+const globalWithCrewRuntime = globalThis as typeof globalThis & Record<symbol, (CrewRuntime & { __piCrewRuntimeVersion?: number }) | undefined>;
 
-export const crewRuntime = globalWithCrewRuntime[crewRuntimeKey] ??= new CrewRuntime();
+function createCrewRuntime(): CrewRuntime & { __piCrewRuntimeVersion?: number } {
+	const runtime = new CrewRuntime() as CrewRuntime & { __piCrewRuntimeVersion?: number };
+	runtime.__piCrewRuntimeVersion = CREW_RUNTIME_VERSION;
+	return runtime;
+}
+
+const existingRuntime = globalWithCrewRuntime[crewRuntimeKey];
+export const crewRuntime = existingRuntime?.__piCrewRuntimeVersion === CREW_RUNTIME_VERSION
+	? existingRuntime
+	: (globalWithCrewRuntime[crewRuntimeKey] = createCrewRuntime());

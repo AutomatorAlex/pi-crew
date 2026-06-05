@@ -11,6 +11,7 @@ interface RegisteredHandlers {
 interface ExtensionContextStub {
 	cwd: string;
 	hasUI: boolean;
+	mode: "tui" | "rpc" | "json" | "print";
 	isIdle: () => boolean;
 	model: undefined;
 	modelRegistry: unknown;
@@ -91,6 +92,7 @@ function context(sessionId = "owner-1", sessionFile?: string): ExtensionContextS
 	return {
 		cwd: "/repo",
 		hasUI: false,
+		mode: "json",
 		isIdle: () => true,
 		model: undefined,
 		modelRegistry: {},

@@ -1,6 +1,6 @@
 {
   "name": "@melihmucuk/pi-crew",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "type": "module",
   "description": "Non-blocking subagent orchestration for pi coding agent",
   "files": [
@@ -43,13 +43,13 @@
     "typebox": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-agent-core": "^0.76.0",
-    "@earendil-works/pi-ai": "^0.76.0",
-    "@earendil-works/pi-coding-agent": "^0.76.0",
-    "@earendil-works/pi-tui": "^0.76.0",
+    "@earendil-works/pi-agent-core": "^0.78.1",
+    "@earendil-works/pi-ai": "^0.78.1",
+    "@earendil-works/pi-coding-agent": "^0.78.1",
+    "@earendil-works/pi-tui": "^0.78.1",
     "@types/node": "^22.19.17",
     "tsx": "^4.22.3",
-    "typebox": "^1.1.39",
+    "typebox": "^1.2.1",
     "typescript": "^5.9.3"
   }
 }

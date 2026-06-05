@@ -103,12 +103,17 @@ describe("tools", () => {
 	it("spawns known agents and reports unknown names", async () => {
 		const { crew, tools, ctx } = setup();
 
-		const spawned = await execute(tools, "crew_spawn", { subagent: "scout", task: "inspect package" }, ctx);
+		const spawned = await execute(tools, "crew_spawn", { subagent: "scout", brief: "inspect package", task: "inspect package" }, ctx);
 		assert.match(text(spawned), /Subagent 'scout' spawned as scout-1234/);
-		assert.deepEqual(spawned.details, { id: "scout-1234", agentName: "scout", task: "inspect package" });
+		assert.deepEqual(spawned.details, { id: "scout-1234", agentName: "scout", brief: "inspect package", task: "inspect package" });
 		assert.equal((crew.spawnCalls[0]?.[0] as { name?: string } | undefined)?.name, "scout");
+		assert.equal((crew.spawnCalls[0]?.[4] as { brief?: string } | undefined)?.brief, "inspect package");
 
-		const missing = await execute(tools, "crew_spawn", { subagent: "missing", task: "x" }, ctx);
+		const emptyBrief = await execute(tools, "crew_spawn", { subagent: "scout", brief: " ", task: "inspect package" }, ctx);
+		assert.equal(emptyBrief.isError, true);
+		assert.match(text(emptyBrief), /brief is required/);
+
+		const missing = await execute(tools, "crew_spawn", { subagent: "missing", brief: "missing task", task: "x" }, ctx);
 		assert.equal(missing.isError, true);
 		assert.match(text(missing), /Unknown subagent: "missing"\. Available:/);
 	});

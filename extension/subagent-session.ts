@@ -175,6 +175,16 @@ function isAborted(state: SubagentState): boolean {
 	return state.status === "aborted";
 }
 
+function normalizeSessionNamePart(value: string): string {
+	return value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function formatSubagentSessionName(state: Pick<SubagentState, "agentConfig" | "brief" | "id">): string {
+	const agentName = normalizeSessionNamePart(state.agentConfig.name) || "subagent";
+	const brief = normalizeSessionNamePart(state.brief) || state.id;
+	return `crew: ${agentName} · ${brief}`;
+}
+
 export class SubagentSessionRunner implements SubagentRunner {
 	constructor(private readonly callbacks: SubagentRunnerCallbacks) {}
 
@@ -211,6 +221,7 @@ export class SubagentSessionRunner implements SubagentRunner {
 			return false;
 		}
 		state.session = session;
+		session.setSessionName(formatSubagentSessionName(state));
 		return true;
 	}
 

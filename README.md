@@ -34,7 +34,7 @@ Lists available subagent definitions and active subagents owned by the current s
 
 #### `crew_spawn`
 
-Spawns a subagent in an isolated session. The subagent runs in the background with its own context window, tools, and skills. When it finishes, the result is delivered to the session that spawned it as a steering message that triggers a new turn. If that session is not active, the result is queued until you switch back to it.
+Spawns a subagent in an isolated session. Each spawn includes a concise `brief` label for session lists and a full self-contained `task`. The subagent runs in the background with its own context window, tools, and skills. When it finishes, the result is delivered to the session that spawned it as a steering message that triggers a new turn. If that session is not active, the result is queued until you switch back to it.
 
 ```
 "spawn scout and find all API endpoints and their authentication methods"
@@ -100,14 +100,14 @@ A bundled orchestration skill that provides best practices for delegating work t
 
 pi-crew ships with six subagent definitions that cover common workflows:
 
-| Subagent             | Purpose                                                                                                                  | Tools                      | Model                       |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------- | --------------------------- |
-| **scout**            | Investigates codebase and returns structured findings. Read-only. Use before planning or implementing to gather context. | read, grep, find, ls, bash | openai-codex/gpt-5.5        |
-| **planner**          | Analyzes requirements and produces a step-by-step implementation plan. Read-only. Does not write code. Interactive.      | read, grep, find, ls, bash | openai-codex/gpt-5.5        |
-| **oracle**           | Evaluates critical decisions, surfaces blind spots, and challenges assumptions. Read-only. Does not implement. Interactive. | read, grep, find, ls, bash | openai-codex/gpt-5.5        |
-| **code-reviewer**    | Reviews code changes for bugs, security issues, and correctness. Read-only. Does not fix issues.                         | read, grep, find, ls, bash | openai-codex/gpt-5.2        |
-| **quality-reviewer** | Reviews code structure for maintainability, duplication, and complexity. Read-only. Does not look for bugs.              | read, grep, find, ls, bash | openai-codex/gpt-5.2        |
-| **worker**           | Implements code changes, fixes, and refactors autonomously. Has full read-write access to the codebase.                  | all                        | openai-codex/gpt-5.5        |
+| Subagent             | Purpose                                                                                                                  | Tools                      | Model                       | Thinking |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------------- | --------------------------- | -------- |
+| **scout**            | Investigates codebase and returns structured findings. Read-only.                                                        | read, grep, find, ls, bash | openai-codex/gpt-5.5        | off      |
+| **planner**          | Produces deterministic implementation plans. Read-only. Does not write code.                                             | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
+| **oracle**           | Evaluates critical decisions, surfaces blind spots, and challenges assumptions. Read-only.                               | read, grep, find, ls, bash | openai-codex/gpt-5.5        | xhigh    |
+| **code-reviewer**    | Reviews scoped code for actionable bugs. Read-only.                                                                      | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
+| **quality-reviewer** | Reviews scoped code for maintainability, duplication, and complexity. Read-only.                                         | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
+| **worker**           | Implements scoped code changes safely and verifies them.                                                                 | all                        | openai-codex/gpt-5.5        | low      |
 
 Read-only bundled subagents still keep `bash` for inspection workflows like `git` and `ast-grep`. This is an instruction-level contract, not a sandbox boundary.
 

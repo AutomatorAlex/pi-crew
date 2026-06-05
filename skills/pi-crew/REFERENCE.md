@@ -2,7 +2,12 @@
 
 ## Delegation Checklist
 
-Before `crew_spawn`, ensure the brief is self-contained but not mechanically templated. Include only information that helps this specific subagent do this specific task:
+Before `crew_spawn`, provide:
+
+- `brief`: a concise human-readable task label for session lists, ideally under 80 characters. Use a few words for intent/outcome; do not include the full task, acceptance criteria, long paths, secrets, or mechanical repo state.
+- `task`: a self-contained delegated task body, not mechanically templated.
+
+In `task`, include only information that helps this specific subagent do this specific task:
 
 - Intent, expected outcome, and relevant user decisions.
 - User-provided references, plus a concise summary after reading them when practical.
@@ -76,7 +81,7 @@ If ownership overlaps, serialize the work.
 ## Tool Notes
 
 - `crew_list`: discovery before a new spawn decision or requested status snapshot; never completion polling.
-- `crew_spawn`: self-contained delegation; ownership transfers after spawn.
+- `crew_spawn`: provide `brief` plus a self-contained `task`; ownership transfers after spawn.
 - `crew_respond`: send a follow-up to a waiting interactive subagent; fire-and-forget.
 - `crew_done`: close a waiting interactive subagent when complete.
 - `crew_abort`: abort active owned subagents only when obsolete, wrong, or cancelled.

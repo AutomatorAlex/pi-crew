@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import {
 	type ExtensionAPI,
@@ -144,6 +145,11 @@ function renderWarningMessage(content: unknown, theme: MessageRendererTheme): Bo
 	return box;
 }
 
+function linkFilePath(filePath: string): string {
+	const url = pathToFileURL(filePath).href;
+	return `\x1b]8;;${url}\x07${filePath}\x1b]8;;\x07`;
+}
+
 export function registerCrewMessageRenderers(pi: ExtensionAPI): void {
 	pi.registerMessageRenderer("crew-result", (message, { expanded }, theme) => {
 		const details = message.details as CrewResultMessageDetails | undefined;
@@ -158,7 +164,7 @@ export function registerCrewMessageRenderers(pi: ExtensionAPI): void {
 		box.addChild(new Text(header, 0, 0));
 
 		if (details?.sessionFile) {
-			box.addChild(new Text(theme.fg("muted", `📁 ${details.sessionFile}`), 0, 0));
+			box.addChild(new Text(theme.fg("muted", `📁 ${linkFilePath(details.sessionFile)}`), 0, 0));
 		}
 
 		if (body) {
@@ -242,7 +248,7 @@ function syncWidgetText(state: WidgetState, agents: ActiveAgentSummary[]): void 
 }
 
 export function updateWidget(ctx: ExtensionContext, crew: CrewRuntime): void {
-	if (!ctx.hasUI) {
+	if (ctx.mode !== "tui") {
 		clearWidget();
 		return;
 	}

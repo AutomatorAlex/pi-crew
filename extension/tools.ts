@@ -175,24 +175,29 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 		},
 	});
 
-	registerActionTool<{ subagent: string; task: string }>(pi, {
+	registerActionTool<{ subagent: string; brief: string; task: string }>(pi, {
 		name: "crew_spawn",
 		label: "Spawn Crew",
 		description:
 			"Spawn a non-blocking subagent that runs in an isolated session. The subagent works independently while your session stays interactive. Results are delivered back to your session as steering messages.",
 		parameters: Type.Object({
 			subagent: Type.String({ description: "Subagent name from crew_list" }),
-			task: Type.String({ description: "Task to delegate to the subagent" }),
+			brief: Type.String({ description: "Concise task label for session lists, ideally under 80 characters. This is not the full task." }),
+			task: Type.String({ description: "Full self-contained task to delegate to the subagent" }),
 		}),
 		promptSnippet: "Spawn a non-blocking subagent. Use crew_list first to see available subagents.",
 		promptGuidelines: [
 			"crew_spawn: Spawn a discovered subagent for one clearly delegated, self-contained task.",
-			"crew_spawn: Include only needed context: constraints, relevant files, acceptance criteria, and expected output.",
+			"crew_spawn: Provide brief as a concise human-readable task label for session lists, ideally under 80 characters; do not put the full task there.",
+			"crew_spawn: Include only needed context in task: constraints, relevant files, acceptance criteria, and expected output.",
 			"crew_spawn: After spawning, ownership transfers to the subagent; do not work on that task yourself.",
 			"crew_spawn: Results arrive as steering messages; do not poll crew_list or fabricate results.",
 			"crew_spawn: Use the bundled pi-crew skill for detailed delegation patterns.",
 		],
 		action: (params, ctx) => {
+			const brief = params.brief.trim();
+			if (!brief) return toolError("brief is required and must not be empty.");
+
 			const toolCtx = getToolContext(ctx);
 			const { agents, warnings } = discoverAgents(toolCtx.cwd);
 			notifyDiscoveryWarnings(ctx, shownDiscoveryWarnings, warnings);
@@ -208,6 +213,7 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 				toolCtx.cwd,
 				toolCtx.callerSessionId,
 				{
+					brief,
 					model: ctx.model,
 					modelRegistry: ctx.modelRegistry,
 					agentDir: getAgentDir(),
@@ -218,11 +224,13 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 			);
 			return toolSuccess(
 				`Subagent '${subagent.name}' spawned as ${id}. Result will be delivered as a steering message when done.`,
-				{ id, agentName: subagent.name, task: params.task },
+				{ id, agentName: subagent.name, brief, task: params.task },
 			);
 		},
 		renderCall(args, theme, _context) {
-			return renderCrewCall(theme, "crew_spawn", args.subagent || "...", args.task);
+			const subagent = args.subagent || "...";
+			const title = args.brief ? `${subagent} · ${args.brief}` : subagent;
+			return renderCrewCall(theme, "crew_spawn", title, args.task);
 		},
 	});
 
