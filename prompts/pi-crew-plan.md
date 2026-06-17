@@ -21,11 +21,11 @@ Build compact shared context for subagents. Include only information that helps 
 - minimal orientation already gathered, only when it clarifies where to look;
 - exact errors/output or verification context, when relevant.
 
-Do not copy full reference contents. Do not include project root/cwd, generic repo conventions, default scope, edit permissions, output format, or role boilerplate. Subagents run in the same repo cwd and can inspect repo guidance themselves.
+Do not copy full reference contents. Do not include project root/cwd, generic repo conventions, default scope, edit permissions, output format, or role boilerplate. Subagents run in the same repo cwd and can inspect repo guidance and any file themselves; they cannot see this session's conversation or decisions, so include any session-only decision a scout or the planner needs and state the findings or plan output you expect back.
 
 If the user provides a plan, spec, issue, doc, design, URL, or file as the source of intent, read it when practical and summarize the relevant intent instead of merely passing the path.
 
-Gather only enough orientation to assign scout scopes or brief the planner: targeted searches, likely entry points, and small config or structure checks when they materially affect delegation. Do not read full implementation files, trace call chains, or analyze implementations. Do not read README/AGENTS just to repeat generic repo guidance.
+Gather only enough orientation to assign scout scopes or instruct the planner: targeted searches, likely entry points, and small config or structure checks when they materially affect delegation. Do not read full implementation files, trace call chains, or analyze implementations. Do not read README/AGENTS just to repeat generic repo guidance.
 
 ## Scouts
 

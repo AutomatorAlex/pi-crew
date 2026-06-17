@@ -55,12 +55,18 @@ function formatAvailableAgents(agents: AgentConfig[]): string[] {
 		return ["No valid subagent definitions found. Add `.md` files to `<cwd>/.pi/agents/` or `~/.pi/agent/agents/`."];
 	}
 
-	return agents.flatMap((agent) => [
-		"",
-		`name: ${agent.name}`,
-		`description: ${agent.description}`,
-		`interactive: ${agent.interactive ? "true" : "false"}`,
-	]);
+	return agents.flatMap((agent) => {
+		const tools = agent.tools === undefined ? "all built-in" : agent.tools.length === 0 ? "none" : agent.tools.join(", ");
+		const skills = agent.skills === undefined ? "all built-in" : agent.skills.length === 0 ? "none" : agent.skills.join(", ");
+		return [
+			"",
+			`name: ${agent.name}`,
+			`description: ${agent.description}`,
+			`interactive: ${agent.interactive ? "true" : "false"}`,
+			`tools: ${tools}`,
+			`skills: ${skills}`,
+		];
+	});
 }
 
 function formatWarnings(warnings: AgentDiscoveryWarning[]): string[] {
@@ -141,14 +147,12 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 	pi.registerTool({
 		name: "crew_list",
 		label: "List Crew",
-		description:
-			"List available subagent definitions and currently running subagents with their status. Use only to discover which subagents exist or to get a one-time status snapshot. Do NOT call this repeatedly to check if a subagent has finished — results are delivered automatically as steering messages.",
+		description: "List subagent definitions and active subagents.",
 		parameters: Type.Object({}),
-		promptSnippet: "List subagent definitions and active subagents",
+		promptSnippet: "List available subagents and active subagents.",
 		promptGuidelines: [
-			"crew_list: List available subagents and active subagents owned by this session.",
-			"crew_list: Use before crew_spawn to discover names, descriptions, and interactive status.",
-			"crew_list: Use only for discovery or a requested status snapshot; do not poll for completion.",
+			"crew_list: Use for discovery or a requested one-time status snapshot.",
+			"crew_list: Call before crew_spawn; never poll for completion.",
 		],
 		async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
 			const toolCtx = getToolContext(ctx);
@@ -178,21 +182,17 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 	registerActionTool<{ subagent: string; brief: string; task: string }>(pi, {
 		name: "crew_spawn",
 		label: "Spawn Crew",
-		description:
-			"Spawn a non-blocking subagent that runs in an isolated session. The subagent works independently while your session stays interactive. Results are delivered back to your session as steering messages.",
+		description: "Spawn a non-blocking subagent in an isolated session. Returns immediately without the result; the result is delivered separately as a steering message.",
 		parameters: Type.Object({
 			subagent: Type.String({ description: "Subagent name from crew_list" }),
 			brief: Type.String({ description: "Concise task label for session lists, ideally under 80 characters. This is not the full task." }),
 			task: Type.String({ description: "Full self-contained task to delegate to the subagent" }),
 		}),
-		promptSnippet: "Spawn a non-blocking subagent. Use crew_list first to see available subagents.",
+		promptSnippet: "Spawn a discovered subagent for delegated work.",
 		promptGuidelines: [
-			"crew_spawn: Spawn a discovered subagent for one clearly delegated, self-contained task.",
-			"crew_spawn: Provide brief as a concise human-readable task label for session lists, ideally under 80 characters; do not put the full task there.",
-			"crew_spawn: Include only needed context in task: constraints, relevant files, acceptance criteria, and expected output.",
-			"crew_spawn: After spawning, ownership transfers to the subagent; do not work on that task yourself.",
-			"crew_spawn: Results arrive as steering messages; do not poll crew_list or fabricate results.",
-			"crew_spawn: Use the bundled pi-crew skill for detailed delegation patterns.",
+			"crew_spawn: Use only after crew_list, for one bounded self-contained task.",
+			"crew_spawn: Keep brief short; put necessary context and criteria in task.",
+			"crew_spawn: Do not duplicate delegated work; wait for steering results.",
 		],
 		action: (params, ctx) => {
 			const brief = params.brief.trim();
@@ -237,17 +237,15 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 	registerActionTool<{ subagent_id?: string; subagent_ids?: string[]; all?: boolean }>(pi, {
 		name: "crew_abort",
 		label: "Abort Crew",
-		description: "Abort one, many, or all active subagents owned by the current session.",
+		description: "Abort active subagents owned by this session.",
 		parameters: Type.Object({
 			subagent_id: Type.Optional(Type.String({ description: "Single subagent ID to abort" })),
 			subagent_ids: Type.Optional(Type.Array(Type.String(), { minItems: 1, description: "Multiple subagent IDs to abort" })),
 			all: Type.Optional(Type.Boolean({ description: "Abort all active subagents owned by the current session" })),
 		}),
-		promptSnippet: "Abort one, many, or all active subagents from this session.",
+		promptSnippet: "Abort active subagents.",
 		promptGuidelines: [
-			"crew_abort: Abort one, many, or all active subagents owned by this session.",
-			"crew_abort: Provide exactly one mode: subagent_id, subagent_ids, or all=true.",
-			"crew_abort: Use only when delegated work is obsolete, wrong, or explicitly cancelled.",
+			"crew_abort: Use one mode only: subagent_id, subagent_ids, or all=true.",
 		],
 		action: (params, ctx) => {
 			const { callerSessionId } = getToolContext(ctx);
@@ -281,16 +279,15 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 	registerActionTool<{ subagent_id: string; message: string }>(pi, {
 		name: "crew_respond",
 		label: "Respond to Crew",
-		description: "Send a follow-up message to an interactive subagent that is waiting for a response.",
+		description: "Send a follow-up message to a waiting interactive subagent. Returns immediately; the response is delivered as a steering message that starts a new turn.",
 		parameters: Type.Object({
 			subagent_id: Type.String({ description: "ID of the waiting subagent (from crew_list or crew_spawn result)" }),
 			message: Type.String({ description: "Message to send to the subagent" }),
 		}),
-		promptSnippet: "Send a follow-up message to a waiting interactive subagent.",
+		promptSnippet: "Respond to a waiting interactive subagent.",
 		promptGuidelines: [
-			"crew_respond: Send a complete follow-up message to a waiting interactive subagent.",
-			"crew_respond: Use the waiting subagent ID from crew_spawn results or crew_list.",
-			"crew_respond: The response arrives as a steering message; do not poll crew_list.",
+			"crew_respond: Send a complete follow-up only to a waiting interactive subagent.",
+			"crew_respond: Returns immediately; wait for the next steering result and do not poll.",
 		],
 		action: (params, ctx) => {
 			const { callerSessionId } = getToolContext(ctx);
@@ -309,14 +306,13 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 	registerActionTool<{ subagent_id: string }>(pi, {
 		name: "crew_done",
 		label: "Done with Crew",
-		description: "Close an interactive subagent session. Use when you no longer need to interact with the subagent.",
+		description: "Close a waiting interactive subagent.",
 		parameters: Type.Object({
 			subagent_id: Type.String({ description: "ID of the subagent to close" }),
 		}),
-		promptSnippet: "Close an interactive subagent session when done.",
+		promptSnippet: "Close a waiting interactive subagent.",
 		promptGuidelines: [
-			"crew_done: Close a waiting interactive subagent owned by this session.",
-			"crew_done: Use only when no further follow-up is needed; otherwise use crew_respond.",
+			"crew_done: Use only when no further follow-up is needed.",
 		],
 		action: (params, ctx) => {
 			const { callerSessionId } = getToolContext(ctx);

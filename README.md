@@ -30,7 +30,7 @@ Once installed, pi-crew exposes these capabilities in your pi session:
 
 #### `crew_list`
 
-Lists available subagent definitions and active subagents owned by the current session.
+Lists available subagent definitions and active subagents owned by the current session. For each definition it shows the `name`, `description`, `interactive` flag, and the resolved `tools` and `skills` (`all built-in`, `none`, or an explicit list).
 
 #### `crew_spawn`
 
@@ -105,7 +105,7 @@ pi-crew ships with six subagent definitions that cover common workflows:
 | **scout**            | Investigates codebase and returns structured findings. Read-only.                                                        | read, grep, find, ls, bash | openai-codex/gpt-5.5        | off      |
 | **planner**          | Produces deterministic implementation plans. Read-only. Does not write code.                                             | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
 | **oracle**           | Evaluates critical decisions, surfaces blind spots, and challenges assumptions. Read-only.                               | read, grep, find, ls, bash | openai-codex/gpt-5.5        | xhigh    |
-| **code-reviewer**    | Reviews scoped code for actionable bugs. Read-only.                                                                      | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
+| **code-reviewer**    | Reviews scoped code for actionable bugs. Does not modify files; may run typecheck and tests.                             | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
 | **quality-reviewer** | Reviews scoped code for maintainability, duplication, and complexity. Read-only.                                         | read, grep, find, ls, bash | openai-codex/gpt-5.5        | high     |
 | **worker**           | Implements scoped code changes safely and verifies them.                                                                 | all                        | openai-codex/gpt-5.5        | low      |
 
