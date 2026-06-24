@@ -203,15 +203,22 @@ export class SubagentSessionRunner implements SubagentRunner {
 
 	private attachSessionListeners(state: SubagentState, session: AgentSession): void {
 		state.unsubscribe = session.subscribe((event) => {
-			if (event.type !== "turn_end") return;
-			state.turns++;
-			const msg = event.message;
-			if (msg.role === "assistant") {
-				const assistantMsg = msg as AssistantMessage;
-				state.contextTokens = assistantMsg.usage.totalTokens;
-				state.model = assistantMsg.model;
+			if (event.type === "turn_end") {
+				state.turns++;
+				const msg = event.message;
+				if (msg.role === "assistant") {
+					const assistantMsg = msg as AssistantMessage;
+					state.contextTokens = assistantMsg.usage.totalTokens;
+					state.model = assistantMsg.model;
+				}
+				this.callbacks.onProgress(state.ownerSessionId);
+				return;
 			}
-			this.callbacks.onProgress(state.ownerSessionId);
+
+			if (event.type === "compaction_end" && event.result?.estimatedTokensAfter !== undefined) {
+				state.contextTokens = event.result.estimatedTokensAfter;
+				this.callbacks.onProgress(state.ownerSessionId);
+			}
 		});
 	}
 

@@ -1,5 +1,6 @@
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
-import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
+import * as piCodingAgent from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import {
@@ -14,6 +15,8 @@ export type CrewToolResult = AgentToolResult<unknown> & {
 	isError?: boolean;
 	terminate?: boolean;
 };
+
+const PROJECT_CONFIG_DIR_NAME = piCodingAgent.CONFIG_DIR_NAME ?? ".pi";
 
 type RegisteredTool = Parameters<ExtensionAPI["registerTool"]>[0];
 type ToolRenderCall = Exclude<RegisteredTool["renderCall"], undefined>;
@@ -52,7 +55,7 @@ function toolSuccess(
 
 function formatAvailableAgents(agents: AgentConfig[]): string[] {
 	if (agents.length === 0) {
-		return ["No valid subagent definitions found. Add `.md` files to `<cwd>/.pi/agents/` or `~/.pi/agent/agents/`."];
+		return [`No valid subagent definitions found. Add \`.md\` files to \`<cwd>/${PROJECT_CONFIG_DIR_NAME}/agents/\` or \`${piCodingAgent.getAgentDir()}/agents/\`.`];
 	}
 
 	return agents.flatMap((agent) => {
@@ -216,7 +219,7 @@ export function registerCrewTools(pi: ExtensionAPI, crew: CrewRuntime, extension
 					brief,
 					model: ctx.model,
 					modelRegistry: ctx.modelRegistry,
-					agentDir: getAgentDir(),
+					agentDir: piCodingAgent.getAgentDir(),
 					parentSessionFile: ctx.sessionManager.getSessionFile(),
 					onWarning: (msg) => ctx.ui.notify(msg, "warning"),
 				},

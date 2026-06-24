@@ -115,15 +115,15 @@ Read-only bundled subagents still keep `bash` for inspection workflows like `git
 
 Subagent definitions are discovered from three locations, in priority order:
 
-1. **Project**: `<cwd>/.pi/agents/*.md`
-2. **User global**: `~/.pi/agent/agents/*.md`
+1. **Project**: `<cwd>/<CONFIG_DIR_NAME>/agents/*.md` (default: `<cwd>/.pi/agents/*.md`)
+2. **User global**: `<agentDir>/agents/*.md` (default: `~/.pi/agent/agents/*.md`)
 3. **Bundled**: shipped with this package
 
 When multiple sources define a subagent with the same `name`, the higher-priority source wins. This lets you override any bundled subagent by placing a file with the same name in your project or user directory.
 
 ## Custom Subagents
 
-Create `.md` files in `<cwd>/.pi/agents/` (project-level) or `~/.pi/agent/agents/` (global) with YAML frontmatter:
+Create `.md` files in Pi's project config agents directory (default `<cwd>/.pi/agents/`) or global agent directory (default `~/.pi/agent/agents/`) with YAML frontmatter:
 
 ```markdown
 ---
@@ -159,8 +159,8 @@ You can override selected frontmatter fields without editing the `.md` definitio
 
 Config locations:
 
-- Global: `~/.pi/agent/pi-crew.json`
-- Project: `<cwd>/.pi/pi-crew.json`
+- Global: `<agentDir>/pi-crew.json` (default `~/.pi/agent/pi-crew.json`)
+- Project: `<cwd>/<CONFIG_DIR_NAME>/pi-crew.json` (default `<cwd>/.pi/pi-crew.json`)
 
 Project config overrides global config. Only these fields are overridable:
 

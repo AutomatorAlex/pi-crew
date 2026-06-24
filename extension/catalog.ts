@@ -2,7 +2,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
-import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
+import * as piCodingAgent from "@earendil-works/pi-coding-agent";
+
+const PROJECT_CONFIG_DIR_NAME = piCodingAgent.CONFIG_DIR_NAME ?? ".pi";
 
 const SUPPORTED_TOOL_NAMES_LITERAL = [
 	"read",
@@ -304,7 +306,7 @@ function parseAgentDefinition(content: string, filePath: string): ParseResult {
 	let frontmatter: Record<string, unknown>;
 	let body: string;
 	try {
-		const parsed = parseFrontmatter<Record<string, unknown>>(content);
+		const parsed = piCodingAgent.parseFrontmatter<Record<string, unknown>>(content);
 		frontmatter = parsed.frontmatter;
 		body = parsed.body;
 	} catch (error) {
@@ -526,13 +528,13 @@ const bundledAgentsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url
 
 class FilesystemAgentCatalogSource implements AgentCatalogSource {
 	loadAgentDefinitionGroups(cwd: string): AgentDefinitionSourceGroup[] {
-		return [path.join(cwd, ".pi", "agents"), path.join(getAgentDir(), "agents"), bundledAgentsDir]
+		return [path.join(cwd, PROJECT_CONFIG_DIR_NAME, "agents"), path.join(piCodingAgent.getAgentDir(), "agents"), bundledAgentsDir]
 			.map(loadAgentDefinitionGroup)
 			.filter((group): group is AgentDefinitionSourceGroup => group !== null);
 	}
 
 	loadConfigFiles(cwd: string): AgentConfigFile[] {
-		return [path.join(getAgentDir(), "pi-crew.json"), path.join(cwd, ".pi", "pi-crew.json")]
+		return [path.join(piCodingAgent.getAgentDir(), "pi-crew.json"), path.join(cwd, PROJECT_CONFIG_DIR_NAME, "pi-crew.json")]
 			.map(loadConfigFile)
 			.filter((file): file is AgentConfigFile => file !== null);
 	}

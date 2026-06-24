@@ -97,8 +97,8 @@ pi-crew is a pi coding agent extension for non-blocking subagent orchestration. 
   Reason: Results must survive session switches without unbounded memory growth.
 
 - Context: Subagent definition discovery.
-  Rule: Discover subagents in priority order: project `<cwd>/.pi/agents/`, user global `~/.pi/agent/agents/`, then bundled `agents/`; higher-priority duplicate names win silently, while duplicates within one source warn.
-  Reason: Project/user definitions must be able to override bundled agents predictably.
+  Rule: Discover subagents in priority order: project `<cwd>/<CONFIG_DIR_NAME>/agents/` (default `.pi`), user global `<agentDir>/agents/`, then bundled `agents/`; higher-priority duplicate names win silently, while duplicates within one source warn.
+  Reason: Project/user definitions must be able to override bundled agents predictably while respecting Pi's configured project config directory.
 
 - Context: Subagent config fields.
   Rule: `model` must use `provider/model-id`; invalid model values fall back to the spawning session model; omitted `tools`/`skills` means all built-ins, while explicit empty `tools`/`skills` means none.
