@@ -83,15 +83,17 @@ function getEnabledModels(cwd: string): Set<string> {
 	return new Set(enabledModels.map((model) => model.toLowerCase()));
 }
 
-function modelKey(model: Model<Api>): string {
-	return `${model.provider}/${model.id}`.toLowerCase();
+function modelKeys(model: Model<Api>): string[] {
+	const fullKey = `${model.provider}/${model.id}`.toLowerCase();
+	const routeKey = model.id.toLowerCase();
+	return routeKey.includes("/") ? [fullKey, routeKey] : [fullKey];
 }
 
 function enforceModelScope(model: Model<Api> | undefined, cwd: string): Model<Api> | undefined {
 	if (!model) return model;
 	const allowed = getEnabledModels(cwd);
 	if (allowed.size === 0) return model;
-	if (allowed.has(modelKey(model))) return model;
+	if (modelKeys(model).some((key) => allowed.has(key))) return model;
 
 	const sortedAllowed = [...allowed].sort().join(", ");
 	throw new Error(`Subagent model "${model.provider}/${model.id}" is outside enabledModels scope. Allowed: ${sortedAllowed}`);
