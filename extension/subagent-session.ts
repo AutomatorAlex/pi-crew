@@ -1,9 +1,12 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Api, AssistantMessage, Model } from "@earendil-works/pi-ai";
 import {
 	type AgentSession,
 	createAgentSession,
 	DefaultResourceLoader,
+	getAgentDir,
 	type ModelRegistry,
 	SessionManager,
 	SettingsManager,
@@ -65,16 +68,45 @@ function resolveTools(agentConfig: AgentConfig): SupportedToolName[] {
 	return [...(agentConfig.tools ?? SUPPORTED_TOOL_NAMES)];
 }
 
-function resolveModel(agentConfig: AgentConfig, ctx: BootstrapContext): { model: Model<Api> | undefined; warnings: string[] } {
+function readEnabledModels(settingsPath: string): string[] | undefined {
+	try {
+		const raw = JSON.parse(fs.readFileSync(settingsPath, "utf-8")) as { enabledModels?: unknown };
+		return Array.isArray(raw.enabledModels) ? raw.enabledModels.filter((value): value is string => typeof value === "string") : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+function getEnabledModels(cwd: string): Set<string> {
+	const projectModels = readEnabledModels(path.join(cwd, ".pi", "settings.json"));
+	const enabledModels = projectModels ?? readEnabledModels(path.join(getAgentDir(), "settings.json")) ?? [];
+	return new Set(enabledModels.map((model) => model.toLowerCase()));
+}
+
+function modelKey(model: Model<Api>): string {
+	return `${model.provider}/${model.id}`.toLowerCase();
+}
+
+function enforceModelScope(model: Model<Api> | undefined, cwd: string): Model<Api> | undefined {
+	if (!model) return model;
+	const allowed = getEnabledModels(cwd);
+	if (allowed.size === 0) return model;
+	if (allowed.has(modelKey(model))) return model;
+
+	const sortedAllowed = [...allowed].sort().join(", ");
+	throw new Error(`Subagent model "${model.provider}/${model.id}" is outside enabledModels scope. Allowed: ${sortedAllowed}`);
+}
+
+function resolveModel(agentConfig: AgentConfig, ctx: BootstrapContext, cwd: string): { model: Model<Api> | undefined; warnings: string[] } {
 	const warnings: string[] = [];
 	const model = ctx.model;
-	if (!agentConfig.parsedModel) return { model, warnings };
+	if (!agentConfig.parsedModel) return { model: enforceModelScope(model, cwd), warnings };
 
 	const found = ctx.modelRegistry.find(agentConfig.parsedModel.provider, agentConfig.parsedModel.modelId);
-	if (found) return { model: found, warnings };
+	if (found) return { model: enforceModelScope(found, cwd), warnings };
 
 	warnings.push(`Model "${agentConfig.model}" not found, using current session model`);
-	return { model, warnings };
+	return { model: enforceModelScope(model, cwd), warnings };
 }
 
 function getSkillWarnings(agentConfig: AgentConfig, resourceLoader: DefaultResourceLoader): string[] {
@@ -96,7 +128,7 @@ async function bootstrapSession(opts: BootstrapOptions): Promise<BootstrapResult
 
 	const authStorage = ctx.modelRegistry.authStorage;
 	const modelRegistry = ctx.modelRegistry;
-	const { model, warnings: modelWarnings } = resolveModel(agentConfig, ctx);
+	const { model, warnings: modelWarnings } = resolveModel(agentConfig, ctx, cwd);
 	warnings.push(...modelWarnings);
 	const tools = resolveTools(agentConfig);
 
