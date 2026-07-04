@@ -5,7 +5,6 @@
   "description": "Non-blocking subagent orchestration for pi coding agent",
   "files": [
     "extension/",
-    "agents/",
     "skills/",
     "prompts/"
   ],

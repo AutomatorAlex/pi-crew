@@ -48,7 +48,6 @@ describe("package metadata", () => {
 	it("ships bundled resources in the npm package", () => {
 		assert.deepEqual(packageJson.files, [
 			"extension/",
-			"agents/",
 			"skills/",
 			"prompts/",
 		]);

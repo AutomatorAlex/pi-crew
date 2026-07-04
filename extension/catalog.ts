@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import * as piCodingAgent from "@earendil-works/pi-coding-agent";
 
@@ -524,11 +523,9 @@ function loadConfigFile(filePath: string): AgentConfigFile | null {
 	}
 }
 
-const bundledAgentsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "agents");
-
 class FilesystemAgentCatalogSource implements AgentCatalogSource {
 	loadAgentDefinitionGroups(cwd: string): AgentDefinitionSourceGroup[] {
-		return [path.join(cwd, PROJECT_CONFIG_DIR_NAME, "agents"), path.join(piCodingAgent.getAgentDir(), "agents"), bundledAgentsDir]
+		return [path.join(cwd, PROJECT_CONFIG_DIR_NAME, "agents"), path.join(piCodingAgent.getAgentDir(), "agents")]
 			.map(loadAgentDefinitionGroup)
 			.filter((group): group is AgentDefinitionSourceGroup => group !== null);
 	}
